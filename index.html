@@ -60,7 +60,7 @@
 <body class="bg-gray-900 text-white font-serif">
     <div id="navbar"></div>
     <main id="main-content" class="container mx-auto p-4 md:p-6 min-h-screen">
-        <!-- All pages will be rendered here dynamically -->
+        <!-- All pages will be loaded here -->
     </main>
 
     <script>
@@ -171,7 +171,11 @@
         function getGuildData() {
             const saved = localStorage.getItem('guildData');
             if (saved) {
-                guildData = JSON.parse(saved);
+                try {
+                    guildData = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Error parsing guild data:', e);
+                }
             }
             return guildData;
         }
@@ -181,21 +185,26 @@
         }
 
         function getPlayerByUid(uid) {
-            return guildData.players.find(p => p.uid === uid);
+            const data = getGuildData();
+            return data.players.find(p => p.uid === uid);
         }
 
         function getPlayerByEmail(email) {
-            return guildData.players.find(p => p.email.toLowerCase() === email.toLowerCase());
+            const data = getGuildData();
+            return data.players.find(p => p.email.toLowerCase() === email.toLowerCase());
         }
 
         function updatePlayer(updatedPlayer) {
-            guildData.players = guildData.players.map(p => 
+            const data = getGuildData();
+            data.players = data.players.map(p => 
                 p.uid === updatedPlayer.uid ? updatedPlayer : p
             );
+            guildData = data;
             saveGuildData();
         }
 
         function registerPlayer(newPlayerData) {
+            const data = getGuildData();
             const playerWithDefaults = {
                 ...newPlayerData,
                 profileScreenshot: `https://picsum.photos/seed/${newPlayerData.uid}/400`,
@@ -212,91 +221,62 @@
                 },
                 badges: [],
             };
-            guildData.players.push(playerWithDefaults);
+            data.players.push(playerWithDefaults);
+            guildData = data;
             saveGuildData();
             return playerWithDefaults;
         }
 
         function updateGuildInfo(newInfo) {
-            guildData.guildInfo = newInfo;
+            const data = getGuildData();
+            data.guildInfo = newInfo;
+            guildData = data;
             saveGuildData();
         }
 
         function addTournament(tournamentData) {
+            const data = getGuildData();
             const newTournament = {
                 ...tournamentData,
                 id: Date.now().toString(),
                 participants: [],
             };
-            guildData.tournaments.push(newTournament);
+            data.tournaments.push(newTournament);
+            guildData = data;
             saveGuildData();
         }
 
         function verifyPlayer(uid) {
-            guildData.players = guildData.players.map(p => 
+            const data = getGuildData();
+            data.players = data.players.map(p => 
                 p.uid === uid ? { ...p, status: 'verified' } : p
             );
+            guildData = data;
             saveGuildData();
         }
 
         function deletePlayer(uid) {
-            guildData.players = guildData.players.filter(p => p.uid !== uid);
+            const data = getGuildData();
+            data.players = data.players.filter(p => p.uid !== uid);
+            guildData = data;
             saveGuildData();
         }
 
         function updatePlayerPermissions(uid, permissions) {
-            guildData.players = guildData.players.map(p => 
+            const data = getGuildData();
+            data.players = data.players.map(p => 
                 p.uid === uid ? { ...p, permissions } : p
             );
+            guildData = data;
             saveGuildData();
         }
 
         function updatePlayerBadges(uid, badges) {
-            guildData.players = guildData.players.map(p => 
+            const data = getGuildData();
+            data.players = data.players.map(p => 
                 p.uid === uid ? { ...p, badges } : p
             );
-            saveGuildData();
-        }
-
-        function registerForTournament(tournamentId, registrationData) {
-            guildData.tournaments = guildData.tournaments.map(t => {
-                if (t.id === tournamentId && !t.participants.some(p => p.playerId === registrationData.playerId)) {
-                    const newParticipant = {
-                        ...registrationData,
-                        status: 'pending'
-                    };
-                    return { ...t, participants: [...t.participants, newParticipant] };
-                }
-                return t;
-            });
-            saveGuildData();
-        }
-
-        function approveTournamentRegistration(tournamentId, playerId) {
-            guildData.tournaments = guildData.tournaments.map(t => {
-                if (t.id === tournamentId) {
-                    return {
-                        ...t,
-                        participants: t.participants.map(p => 
-                            p.playerId === playerId ? {...p, status: 'approved'} : p
-                        )
-                    };
-                }
-                return t;
-            });
-            saveGuildData();
-        }
-
-        function rejectTournamentRegistration(tournamentId, playerId) {
-            guildData.tournaments = guildData.tournaments.map(t => {
-                if (t.id === tournamentId) {
-                    return {
-                        ...t,
-                        participants: t.participants.filter(p => p.playerId !== playerId)
-                    };
-                }
-                return t;
-            });
+            guildData = data;
             saveGuildData();
         }
 
@@ -306,9 +286,15 @@
         function getCurrentUser() {
             const saved = localStorage.getItem('currentUser');
             if (saved) {
-                currentUser = JSON.parse(saved);
-                const userExists = getPlayerByEmail(currentUser?.email);
-                if (!userExists) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    // Verify user still exists in data
+                    const userExists = getPlayerByEmail(currentUser?.email);
+                    if (!userExists) {
+                        currentUser = null;
+                        localStorage.removeItem('currentUser');
+                    }
+                } catch (e) {
                     currentUser = null;
                     localStorage.removeItem('currentUser');
                 }
@@ -384,11 +370,14 @@
                 if (isAuthenticated()) {
                     const hash = window.location.hash.substring(1) || 'home';
                     showPage(hash);
+                } else {
+                    showPage('login');
                 }
             });
         }
 
         function showPage(pageName) {
+            // Hide all pages
             const pages = ['home', 'profile', 'guild-profile', 'tournaments', 'admin', 'login'];
             pages.forEach(page => {
                 const element = document.getElementById(`page-${page}`);
@@ -398,11 +387,13 @@
                 }
             });
             
+            // Show requested page
             const targetPage = document.getElementById(`page-${pageName}`);
             if (targetPage) {
                 targetPage.classList.remove('hidden');
                 targetPage.classList.add('active', 'fade-in');
                 
+                // Call page-specific render function
                 switch(pageName) {
                     case 'home':
                         renderGuildHome();
@@ -425,14 +416,10 @@
                         }
                         break;
                     case 'login':
-                        renderLogin();
+                        // Already rendered by renderLogin
                         break;
                 }
             }
-        }
-
-        function navigateTo(page) {
-            window.location.hash = page;
         }
 
         function showModal(modalId) {
@@ -455,9 +442,9 @@
         function renderNavbar() {
             const navbar = document.getElementById('navbar');
             const user = getCurrentUser();
-            const guildData = getGuildData();
+            const data = getGuildData();
             
-            const pendingCount = guildData.players.filter(p => p.status === 'pending').length;
+            const pendingCount = data.players.filter(p => p.status === 'pending').length;
             
             navbar.innerHTML = `
                 <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
@@ -497,16 +484,23 @@
                                 <li><button onclick="logout()" class="block w-full text-left py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">Logout</button></li>
                             </ul>
                         </div>
-                        ` : ''}
+                        ` : `
+                        <div class="hidden md:block">
+                            <a href="#login" class="py-2 px-3 text-gray-300 hover:text-red-400">Login</a>
+                        </div>
+                        `}
                     </div>
                 </nav>
             `;
 
             // Mobile menu functionality
-            document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
-                const menu = document.getElementById('mobile-menu');
-                menu.classList.toggle('hidden');
-            });
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            if (mobileMenuButton) {
+                mobileMenuButton.addEventListener('click', function() {
+                    const menu = document.getElementById('mobile-menu');
+                    menu.classList.toggle('hidden');
+                });
+            }
         }
 
         // Login Component
@@ -673,8 +667,8 @@
         // Guild Home Component
         function renderGuildHome() {
             const mainContent = document.getElementById('main-content');
-            const guildData = getGuildData();
-            const players = guildData.players;
+            const data = getGuildData();
+            const players = data.players;
             
             mainContent.innerHTML = `
                 <div id="page-home" class="page active fade-in">
@@ -726,7 +720,7 @@
             // Search functionality
             document.getElementById('search-members').addEventListener('input', function(e) {
                 const searchTerm = e.target.value.toLowerCase();
-                const members = guildData.players;
+                const members = data.players;
                 const filteredMembers = searchTerm ? 
                     members.filter(player => player.name.toLowerCase().includes(searchTerm)) : 
                     members;
@@ -763,7 +757,7 @@
         // Guild Profile Component
         function renderGuildProfile() {
             const mainContent = document.getElementById('main-content');
-            const guildData = getGuildData();
+            const data = getGuildData();
             const user = getCurrentUser();
             const canEdit = user?.permissions.canEditGuildProfile;
             
@@ -781,20 +775,20 @@
 
                         <div class="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-gray-700">
                             <img 
-                                src="${guildData.guildInfo.image}" 
+                                src="${data.guildInfo.image}" 
                                 alt="Guild Banner"
                                 class="w-full h-48 object-cover"
                                 id="guild-banner"
                             />
                             <div class="p-6 md:p-8" id="guild-profile-content">
                                 <div class="text-center">
-                                    <h2 class="text-4xl font-extrabold text-white mb-2">${guildData.guildInfo.name}</h2>
+                                    <h2 class="text-4xl font-extrabold text-white mb-2">${data.guildInfo.name}</h2>
                                     <p class="text-lg text-gray-400 mb-6">
-                                        Guild ID: <span class="font-semibold text-red-400">${guildData.guildInfo.id}</span>
+                                        Guild ID: <span class="font-semibold text-red-400">${data.guildInfo.id}</span>
                                     </p>
 
                                     <a
-                                        href="${guildData.guildInfo.joinLink}"
+                                        href="${data.guildInfo.joinLink}"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         class="inline-block px-10 py-3 rounded-lg bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white font-bold text-lg transition-all transform hover:scale-105 shadow-lg btn-glow"
@@ -804,10 +798,10 @@
                                     
                                     <div class="mt-8 text-left text-gray-300">
                                         <h3 class="text-xl font-bold mb-4 text-white">About Us</h3>
-                                        <p class="whitespace-pre-wrap">${guildData.guildInfo.about}</p>
+                                        <p class="whitespace-pre-wrap">${data.guildInfo.about}</p>
                                         <h3 class="text-xl font-bold mb-4 mt-6 text-white">Rules</h3>
                                         <ul class="list-disc list-inside space-y-2">
-                                            ${guildData.guildInfo.rules.map(rule => `<li>${rule}</li>`).join('')}
+                                            ${data.guildInfo.rules.map(rule => `<li>${rule}</li>`).join('')}
                                         </ul>
                                     </div>
                                 </div>
@@ -818,88 +812,10 @@
             `;
         }
 
-        function enableGuildEdit() {
-            const guildData = getGuildData();
-            const content = document.getElementById('guild-profile-content');
-            
-            content.innerHTML = `
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Guild Name</label>
-                        <input type="text" id="guild-name" value="${guildData.guildInfo.name}" class="w-full p-2 rounded input-field text-3xl"/>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">About Us</label>
-                        <textarea id="guild-about" class="w-full p-2 rounded input-field h-32">${guildData.guildInfo.about}</textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-2">Rules</label>
-                        <div id="rules-container" class="space-y-2">
-                            ${guildData.guildInfo.rules.map((rule, index) => `
-                                <div class="flex items-center gap-2">
-                                    <input type="text" value="${rule}" data-index="${index}" class="rule-input w-full p-2 rounded input-field"/>
-                                    <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button onclick="addRule()" class="mt-2 text-sm text-cyan-400 hover:text-cyan-300">+ Add Rule</button>
-                    </div>
-                    <div class="flex justify-end gap-4">
-                        <button onclick="cancelGuildEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500">Cancel</button>
-                        <button onclick="saveGuildInfo()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 btn-glow">Save</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function addRule() {
-            const container = document.getElementById('rules-container');
-            const index = container.children.length;
-            container.innerHTML += `
-                <div class="flex items-center gap-2">
-                    <input type="text" value="" data-index="${index}" class="rule-input w-full p-2 rounded input-field" placeholder="New rule"/>
-                    <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
-                </div>
-            `;
-        }
-
-        function removeRule(index) {
-            const inputs = document.querySelectorAll('.rule-input');
-            if (inputs.length > 1) {
-                inputs[index].parentElement.remove();
-                // Reindex remaining inputs
-                document.querySelectorAll('.rule-input').forEach((input, i) => {
-                    input.setAttribute('data-index', i);
-                });
-            }
-        }
-
-        function cancelGuildEdit() {
-            renderGuildProfile();
-        }
-
-        function saveGuildInfo() {
-            const name = document.getElementById('guild-name').value;
-            const about = document.getElementById('guild-about').value;
-            const rules = Array.from(document.querySelectorAll('.rule-input')).map(input => input.value).filter(rule => rule.trim() !== '');
-            
-            const newInfo = {
-                ...getGuildData().guildInfo,
-                name,
-                about,
-                rules
-            };
-            
-            updateGuildInfo(newInfo);
-            renderGuildProfile();
-        }
-
         // Profile Component
         function renderProfile(uid) {
             const player = getPlayerByUid(uid);
             const user = getCurrentUser();
-            const canEdit = user?.uid === ADMIN_UID || user?.uid === player?.uid;
-            const isAdmin = user?.uid === ADMIN_UID;
             
             if (!player) {
                 showPage('home');
@@ -918,12 +834,6 @@
                                 class="w-full h-full object-cover"
                                 id="cover-photo"
                             />
-                            ${canEdit ? `
-                                <label for="cover-upload" class="absolute top-4 right-4 bg-gray-900/50 p-2 rounded-full cursor-pointer hover:bg-gray-900/80 transition-colors">
-                                    📷
-                                    <input id="cover-upload" type="file" class="hidden" accept="image/*" onchange="handleFileChange(event, 'cover')" />
-                                </label>
-                            ` : ''}
 
                             <div class="absolute -bottom-16 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0">
                                 <div class="w-32 h-32 md:w-40 md:h-40 relative rounded-full border-4 border-red-500 bg-gray-800">
@@ -936,12 +846,6 @@
                                     <p class="absolute -bottom-2 -right-2 text-3xl" title="${player.role === ROLES.LEADER ? BADGE_DEFINITIONS['Guild Leader'].description : ''}">
                                         ${player.role === ROLES.LEADER ? BADGE_DEFINITIONS['Guild Leader'].icon : ''}
                                     </p>
-                                    ${canEdit ? `
-                                        <label for="profile-upload" class="absolute bottom-1 right-1 bg-gray-700 p-2 rounded-full cursor-pointer hover:bg-gray-600 transition-colors">
-                                            ✏️
-                                            <input id="profile-upload" type="file" class="hidden" accept="image/*" onchange="handleFileChange(event, 'profile')" />
-                                        </label>
-                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -952,7 +856,7 @@
                                 <div class='text-center md:text-left'>
                                     <h1 class="text-4xl font-bold text-white inline-flex items-center">
                                         ${player.name}
-                                        ${player.status === 'verified' ? '✓' : ''}
+                                        ${player.status === 'verified' ? ' ✓' : ''}
                                     </h1>
                                     <p class="text-sm mt-1 font-bold ${player.status === 'verified' ? 'text-green-400' : 'text-yellow-400'}">
                                         ${player.status === 'verified' ? 'Verified Member' : 'Pending Approval'}
@@ -960,9 +864,6 @@
                                     <p class="text-lg text-gray-400 mt-2">UID: ${player.uid}</p>
                                     <p class="text-xl text-red-400 font-semibold mt-2">${player.role}</p>
                                 </div>
-                                ${canEdit && !window.profileEditMode ? `
-                                    <button onclick="enableProfileEdit()" class="mt-4 md:mt-0 px-6 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors flex-shrink-0">Edit Profile</button>
-                                ` : ''}
                             </div>
                             
                             <!-- Badges Display -->
@@ -1002,88 +903,232 @@
                     </div>
                 </div>
             `;
-
-            window.profileEditMode = false;
         }
 
-        function enableProfileEdit() {
-            window.profileEditMode = true;
-            const player = getPlayerByUid(getCurrentUser().uid);
+        // Tournaments Component (Basic)
+        function renderTournaments() {
+            const mainContent = document.getElementById('main-content');
+            const data = getGuildData();
+            const user = getCurrentUser();
+            const canManage = user?.permissions.canManageTournaments;
             
-            document.querySelector('#page-profile .pt-20').innerHTML = `
-                <div class="flex flex-col md:flex-row justify-between items-start">
-                    <div class='text-center md:text-left w-full'>
-                        <input type="text" id="edit-name" value="${player.name}" class="text-4xl font-bold rounded p-2 w-full input-field"/>
-                        <p class="text-lg text-gray-400 mt-2">UID: ${player.uid}</p>
-                        <input type="text" id="edit-role" value="${player.role}" ${getCurrentUser().uid !== ADMIN_UID ? 'disabled' : ''} class="text-xl rounded p-2 w-full input-field"/>
-                    </div>
-                    <div class="mt-4 md:mt-0 flex gap-2">
-                        <button onclick="saveProfile()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 btn-glow">Save</button>
-                        <button onclick="cancelProfileEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500">Cancel</button>
-                    </div>
-                </div>
-                
-                <div class="mt-8 pt-6 border-t border-gray-700 space-y-6">
-                    <div>
-                        <h2 class="text-xl font-semibold mb-2">Edit Bio</h2>
-                        <textarea id="edit-bio" class="w-full h-28 resize-y p-2 rounded input-field">${player.bio || ''}</textarea>
+            mainContent.innerHTML = `
+                <div id="page-tournaments" class="page active fade-in">
+                    <div class="flex justify-between items-center border-b-2 border-gray-700 pb-2 mb-6">
+                        <h1 class="text-3xl md:text-4xl font-bold text-red-400">
+                            Guild Tournaments
+                        </h1>
                     </div>
                     
-                    <div class="mt-8 flex justify-end gap-4">
-                        <button onclick="cancelProfileEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>
-                        <button onclick="saveProfile()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 transition-colors btn-glow">Save Changes</button>
+                    ${data.tournaments.length === 0 ? `
+                        <p class="text-center text-gray-400 mt-10">No upcoming tournaments. Check back later!</p>
+                    ` : `
+                        <div class="space-y-6">
+                            ${data.tournaments.map(tournament => `
+                                <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
+                                    <h3 class="text-2xl font-bold text-red-400">${tournament.name}</h3>
+                                    <p class="text-sm text-gray-400 mb-3">${new Date(tournament.date).toLocaleString()}</p>
+                                    <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-300 mb-3">
+                                        <span><strong class="font-semibold text-white">Type:</strong> ${tournament.type}</span>
+                                        <span><strong class="font-semibold text-white">Mode:</strong> ${tournament.mode}</span>
+                                        <span><strong class="font-semibold text-white">Map:</strong> ${tournament.map}</span>
+                                    </div>
+                                    <p class="text-gray-300 whitespace-pre-wrap">${tournament.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // Admin Dashboard Component (Basic)
+        function renderAdminDashboard() {
+            const mainContent = document.getElementById('main-content');
+            const data = getGuildData();
+            const user = getCurrentUser();
+            
+            const pendingPlayers = data.players.filter(p => p.status === 'pending');
+            const verifiedPlayers = data.players.filter(p => p.status === 'verified');
+            
+            mainContent.innerHTML = `
+                <div id="page-admin" class="page active fade-in">
+                    <h1 class="text-3xl md:text-4xl font-bold mb-6 text-red-400 border-b-2 border-gray-700 pb-2">Management Dashboard</h1>
+
+                    <!-- Stats Section -->
+                    <div class="w-full grid md:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-gray-800 p-4 rounded-lg flex items-center gap-4 border border-gray-700">
+                            <div class="text-red-400">👥</div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Total Members</p>
+                                <p class="text-white text-2xl font-bold">${data.players.length}</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg flex items-center gap-4 border border-gray-700">
+                            <div class="text-red-400">⏳</div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Pending Approvals</p>
+                                <p class="text-white text-2xl font-bold">${pendingPlayers.length}</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg flex items-center gap-4 border border-gray-700">
+                            <div class="text-red-400">🏆</div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Active Tournaments</p>
+                                <p class="text-white text-2xl font-bold">${data.tournaments.length}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Verifications -->
+                    ${user?.permissions.canVerifyMembers && pendingPlayers.length > 0 ? `
+                        <div class="bg-gray-800 p-6 rounded-lg mb-8 border border-yellow-500/50">
+                            <h2 class="text-2xl font-semibold mb-4 text-yellow-400">Pending Member Verifications</h2>
+                            <ul class="space-y-3">
+                                ${pendingPlayers.map(player => `
+                                    <li class="flex justify-between items-center bg-gray-700 p-3 rounded">
+                                        <div>
+                                            <p class="font-bold">${player.name}</p>
+                                            <p class="text-sm text-gray-400">UID: ${player.uid} | Email: ${player.email}</p>
+                                        </div>
+                                        <button onclick="verifyPlayer('${player.uid}')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded transition-colors btn-glow">
+                                            Approve
+                                        </button>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    <!-- Players List -->
+                    <h2 class="text-2xl font-semibold mb-4 mt-8">Guild Members</h2>
+                    <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-700">
+                                <thead class="bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Name</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Role</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-gray-800 divide-y divide-gray-700">
+                                    ${verifiedPlayers.map(player => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">${player.name}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${player.role}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                <span class="px-2 py-1 text-xs rounded-full ${player.status === 'verified' ? 'bg-green-500 text-green-100' : 'bg-yellow-500 text-yellow-100'}">
+                                                    ${player.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
-        function cancelProfileEdit() {
-            window.profileEditMode = false;
-            renderProfile(getCurrentUser().uid);
+        // Guild Profile Edit Functions
+        function enableGuildEdit() {
+            const data = getGuildData();
+            const content = document.getElementById('guild-profile-content');
+            
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Guild Name</label>
+                        <input type="text" id="guild-name" value="${data.guildInfo.name}" class="w-full p-2 rounded input-field text-3xl"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">About Us</label>
+                        <textarea id="guild-about" class="w-full p-2 rounded input-field h-32">${data.guildInfo.about}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Rules</label>
+                        <div id="rules-container" class="space-y-2">
+                            ${data.guildInfo.rules.map((rule, index) => `
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="${rule}" data-index="${index}" class="rule-input w-full p-2 rounded input-field"/>
+                                    <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="addRule()" class="mt-2 text-sm text-cyan-400 hover:text-cyan-300">+ Add Rule</button>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <button onclick="cancelGuildEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500">Cancel</button>
+                        <button onclick="saveGuildInfo()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 btn-glow">Save</button>
+                    </div>
+                </div>
+            `;
         }
 
-        function saveProfile() {
-            const player = getPlayerByUid(getCurrentUser().uid);
-            const updatedPlayer = {
-                ...player,
-                name: document.getElementById('edit-name').value,
-                role: document.getElementById('edit-role').value,
-                bio: document.getElementById('edit-bio').value
+        function addRule() {
+            const container = document.getElementById('rules-container');
+            const index = container.children.length;
+            const newRule = document.createElement('div');
+            newRule.className = 'flex items-center gap-2';
+            newRule.innerHTML = `
+                <input type="text" value="" data-index="${index}" class="rule-input w-full p-2 rounded input-field" placeholder="New rule"/>
+                <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
+            `;
+            container.appendChild(newRule);
+        }
+
+        function removeRule(index) {
+            const inputs = document.querySelectorAll('.rule-input');
+            if (inputs.length > 1) {
+                inputs[index].parentElement.remove();
+                // Reindex remaining inputs
+                document.querySelectorAll('.rule-input').forEach((input, i) => {
+                    input.setAttribute('data-index', i);
+                });
+            }
+        }
+
+        function cancelGuildEdit() {
+            renderGuildProfile();
+        }
+
+        function saveGuildInfo() {
+            const name = document.getElementById('guild-name').value;
+            const about = document.getElementById('guild-about').value;
+            const rules = Array.from(document.querySelectorAll('.rule-input')).map(input => input.value).filter(rule => rule.trim() !== '');
+            
+            const data = getGuildData();
+            const newInfo = {
+                ...data.guildInfo,
+                name,
+                about,
+                rules
             };
             
-            updatePlayer(updatedPlayer);
-            setCurrentUser(updatedPlayer);
-            window.profileEditMode = false;
-            renderProfile(getCurrentUser().uid);
+            updateGuildInfo(newInfo);
+            renderGuildProfile();
         }
 
-        function handleFileChange(event, type) {
-            // This is a simplified version - in a real app you'd upload to a server
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    if (type === 'cover') {
-                        document.getElementById('cover-photo').src = e.target.result;
-                    } else {
-                        document.getElementById('profile-pic').src = e.target.result;
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // Initialize the application
+        // Initialize the application when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
-        });
-
-        // Close modals when clicking outside
-        document.addEventListener('click', function(event) {
-            if (event.target.classList.contains('modal-backdrop')) {
-                event.target.classList.add('hidden');
+            
+            // Render login page initially
+            if (!isAuthenticated()) {
+                renderLogin();
             }
         });
+
+        // Make functions globally available for onclick handlers
+        window.logout = logout;
+        window.enableGuildEdit = enableGuildEdit;
+        window.addRule = addRule;
+        window.removeRule = removeRule;
+        window.cancelGuildEdit = cancelGuildEdit;
+        window.saveGuildInfo = saveGuildInfo;
+        window.verifyPlayer = verifyPlayer;
     </script>
 </body>
 </html>
