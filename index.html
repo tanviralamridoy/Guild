@@ -1,1 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF MONSTER Guild Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Times New Roman", serif;
+            background-color: #030712;
+            background-image: radial-gradient(circle at top right, rgba(139, 0, 0, 0.15), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(255, 69, 0, 0.15), transparent 50%);
+        }
+        .btn-glow {
+            transition: all 0.3s ease-in-out;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 8px rgba(255, 107, 107, 0.6), 0 0 16px rgba(255, 107, 107, 0.4);
+        }
+        .input-field {
+            background-color: rgba(10, 10, 10, 0.5);
+            border: 1px solid #4a4a4a;
+            transition: all 0.3s;
+        }
+        .input-field:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
+            background-color: rgba(10, 10, 10, 0.7);
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .profile-card {
+            transition: all 0.3s ease;
+        }
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(255, 0, 0, 0.2);
+        }
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-serif">
+    <div id="navbar"></div>
+    <main id="main-content" class="container mx-auto p-4 md:p-6 min-h-screen">
+        <!-- All pages will be rendered here dynamically -->
+    </main>
 
+    <script>
+        // ==================== CONSTANTS AND INITIAL DATA ====================
+        const ADMIN_UID = '3000927280';
+        const ADMIN_NAME = 'Tanvir Alam Hridoy';
+
+        const BADGE_DEFINITIONS = {
+            'Guild Leader': { icon: '👑', color: 'bg-red-600 text-white', description: 'The founder and leader of the guild.' },
+            'MVP': { icon: '🏆', color: 'bg-yellow-500 text-white', description: 'Most Valuable Player in a recent tournament.' },
+            'Top Fragger': { icon: '💥', color: 'bg-orange-500 text-white', description: 'Consistently high kill count.' },
+            'Strategist': { icon: '🧠', color: 'bg-blue-500 text-white', description: 'Mastermind of guild strategies.' },
+            'Veteran': { icon: '🛡️', color: 'bg-gray-500 text-white', description: 'A long-standing, loyal member.' },
+            'Rising Star': { icon: '⭐', color: 'bg-green-500 text-white', description: 'A promising new talent.' }
+        };
+
+        const AVAILABLE_BADGES = Object.keys(BADGE_DEFINITIONS).filter(b => b !== 'Guild Leader');
+        const TOURNAMENT_TYPES = ['BR', 'CS'];
+        const TOURNAMENT_MODES = ['Solo', 'Duo', 'Squad'];
+        const TOURNAMENT_MAPS = ['Bermuda', 'Kalahari', 'Purgatory', 'Alpine', 'NeXTerra'];
+
+        const ROLES = {
+            LEADER: 'Leader',
+            ACTING_LEADER: 'Acting Guild Leader',
+            ELDER: 'Elder',
+            MEMBER: 'Member'
+        };
+
+        // Initial Data Structure
+        let guildData = {
+            guildInfo: {
+                name: "FF MONSTER",
+                id: "3023945535",
+                joinLink: "https://ff.garena.com/guild/3023945535",
+                image: "https://picsum.photos/seed/guild-monster/1200/400",
+                about: "Welcome to FF MONSTER! We are a competitive and friendly guild aiming for the top. We value teamwork, skill, and sportsmanship. Join us to participate in tournaments, custom rooms, and daily scrims.",
+                rules: [
+                    "Active participation in guild wars is mandatory.",
+                    "Respect all members.",
+                    "Minimum rank requirement: Heroic.",
+                    "Discord is required for communication."
+                ],
+            },
+            players: [
+                {
+                    uid: ADMIN_UID,
+                    name: ADMIN_NAME,
+                    email: 'leader@ffmonster.com',
+                    role: ROLES.LEADER,
+                    profileScreenshot: 'https://picsum.photos/seed/leader/400',
+                    coverPhoto: 'https://picsum.photos/seed/leader-cover/800/300',
+                    socials: {
+                        facebook: 'https://facebook.com',
+                        instagram: 'https://instagram.com',
+                        youtube: 'https://youtube.com',
+                    },
+                    bio: 'Leading FF MONSTER to victory! Passionate gamer, strategist, and proud leader of this amazing guild.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: true,
+                        canManageTournaments: true,
+                        canEditGuildProfile: true,
+                        canKickMembers: true,
+                    },
+                    badges: ['Guild Leader'],
+                },
+                {
+                    uid: '1234567890',
+                    name: 'Shadow Striker',
+                    email: 'acting@ffmonster.com',
+                    role: ROLES.ACTING_LEADER,
+                    profileScreenshot: 'https://picsum.photos/seed/acting/400',
+                    coverPhoto: 'https://picsum.photos/seed/acting-cover/800/300',
+                    socials: {},
+                    bio: 'Second in command, first in headshots.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: false,
+                        canManageTournaments: false,
+                        canEditGuildProfile: false,
+                        canKickMembers: false,
+                    },
+                    badges: ['Veteran'],
+                },
+                {
+                    uid: '0987654321',
+                    name: 'Viper',
+                    email: 'elder1@ffmonster.com',
+                    role: ROLES.ELDER,
+                    profileScreenshot: 'https://picsum.photos/seed/elder1/400',
+                    coverPhoto: 'https://picsum.photos/seed/elder1-cover/800/300',
+                    socials: {},
+                    bio: 'Veteran player, here to guide and dominate.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: false,
+                        canManageTournaments: false,
+                        canEditGuildProfile: false,
+                        canKickMembers: false,
+                    },
+                    badges: ['Veteran', 'Strategist'],
+                },
+            ],
+            tournaments: []
+        };
+
+        // ==================== DATA MANAGEMENT ====================
+        function getGuildData() {
+            const saved = localStorage.getItem('guildData');
+            if (saved) {
+                guildData = JSON.parse(saved);
+            }
+            return guildData;
+        }
+
+        function saveGuildData() {
+            localStorage.setItem('guildData', JSON.stringify(guildData));
+        }
+
+        function getPlayerByUid(uid) {
+            return guildData.players.find(p => p.uid === uid);
+        }
+
+        function getPlayerByEmail(email) {
+            return guildData.players.find(p => p.email.toLowerCase() === email.toLowerCase());
+        }
+
+        function updatePlayer(updatedPlayer) {
+            guildData.players = guildData.players.map(p => 
+                p.uid === updatedPlayer.uid ? updatedPlayer : p
+            );
+            saveGuildData();
+        }
+
+        function registerPlayer(newPlayerData) {
+            const playerWithDefaults = {
+                ...newPlayerData,
+                profileScreenshot: `https://picsum.photos/seed/${newPlayerData.uid}/400`,
+                coverPhoto: `https://picsum.photos/seed/cover-${newPlayerData.uid}/800/300`,
+                socials: {},
+                role: ROLES.MEMBER,
+                bio: '',
+                status: 'pending',
+                permissions: {
+                    canVerifyMembers: false,
+                    canManageTournaments: false,
+                    canEditGuildProfile: false,
+                    canKickMembers: false,
+                },
+                badges: [],
+            };
+            guildData.players.push(playerWithDefaults);
+            saveGuildData();
+            return playerWithDefaults;
+        }
+
+        function updateGuildInfo(newInfo) {
+            guildData.guildInfo = newInfo;
+            saveGuildData();
+        }
+
+        function addTournament(tournamentData) {
+            const newTournament = {
+                ...tournamentData,
+                id: Date.now().toString(),
+                participants: [],
+            };
+            guildData.tournaments.push(newTournament);
+            saveGuildData();
+        }
+
+        function verifyPlayer(uid) {
+            guildData.players = guildData.players.map(p => 
+                p.uid === uid ? { ...p, status: 'verified' } : p
+            );
+            saveGuildData();
+        }
+
+        function deletePlayer(uid) {
+            guildData.players = guildData.players.filter(p => p.uid !== uid);
+            saveGuildData();
+        }
+
+        function updatePlayerPermissions(uid, permissions) {
+            guildData.players = guildData.players.map(p => 
+                p.uid === uid ? { ...p, permissions } : p
+            );
+            saveGuildData();
+        }
+
+        function updatePlayerBadges(uid, badges) {
+            guildData.players = guildData.players.map(p => 
+                p.uid === uid ? { ...p, badges } : p
+            );
+            saveGuildData();
+        }
+
+        function registerForTournament(tournamentId, registrationData) {
+            guildData.tournaments = guildData.tournaments.map(t => {
+                if (t.id === tournamentId && !t.participants.some(p => p.playerId === registrationData.playerId)) {
+                    const newParticipant = {
+                        ...registrationData,
+                        status: 'pending'
+                    };
+                    return { ...t, participants: [...t.participants, newParticipant] };
+                }
+                return t;
+            });
+            saveGuildData();
+        }
+
+        function approveTournamentRegistration(tournamentId, playerId) {
+            guildData.tournaments = guildData.tournaments.map(t => {
+                if (t.id === tournamentId) {
+                    return {
+                        ...t,
+                        participants: t.participants.map(p => 
+                            p.playerId === playerId ? {...p, status: 'approved'} : p
+                        )
+                    };
+                }
+                return t;
+            });
+            saveGuildData();
+        }
+
+        function rejectTournamentRegistration(tournamentId, playerId) {
+            guildData.tournaments = guildData.tournaments.map(t => {
+                if (t.id === tournamentId) {
+                    return {
+                        ...t,
+                        participants: t.participants.filter(p => p.playerId !== playerId)
+                    };
+                }
+                return t;
+            });
+            saveGuildData();
+        }
+
+        // ==================== AUTHENTICATION ====================
+        let currentUser = null;
+
+        function getCurrentUser() {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                const userExists = getPlayerByEmail(currentUser?.email);
+                if (!userExists) {
+                    currentUser = null;
+                    localStorage.removeItem('currentUser');
+                }
+            }
+            return currentUser;
+        }
+
+        function setCurrentUser(user) {
+            currentUser = user;
+            if (user) {
+                localStorage.setItem('currentUser', JSON.stringify(user));
+            } else {
+                localStorage.removeItem('currentUser');
+            }
+        }
+
+        function signIn(email, password) {
+            return new Promise((resolve) => {
+                const user = getPlayerByEmail(email);
+                if (!user) {
+                    resolve({ success: false, message: "No account found with this email." });
+                    return;
+                }
+                if (user.status === 'pending') {
+                    resolve({ success: false, message: "Your account is pending verification by the guild leader." });
+                    return;
+                }
+                setCurrentUser(user);
+                resolve({ success: true, message: "Login successful!" });
+            });
+        }
+
+        function signUp(userData) {
+            return new Promise((resolve) => {
+                if (getPlayerByEmail(userData.email) || getPlayerByUid(userData.uid)) {
+                    resolve({ success: false, message: "An account with this email or UID already exists." });
+                    return;
+                }
+                const newPlayer = registerPlayer(userData);
+                resolve({ success: true, message: "Registration successful! An admin will verify your account shortly." });
+            });
+        }
+
+        function logout() {
+            setCurrentUser(null);
+            showPage('login');
+            renderNavbar();
+        }
+
+        function isAuthenticated() {
+            return getCurrentUser() !== null;
+        }
+
+        function canAccessManagement() {
+            const user = getCurrentUser();
+            return user && Object.values(user.permissions).some(p => p === true);
+        }
+
+        // ==================== ROUTING AND PAGE MANAGEMENT ====================
+        function initializeApp() {
+            getGuildData();
+            getCurrentUser();
+            renderNavbar();
+            
+            if (isAuthenticated()) {
+                const hash = window.location.hash.substring(1) || 'home';
+                showPage(hash);
+            } else {
+                showPage('login');
+            }
+            
+            window.addEventListener('hashchange', function() {
+                if (isAuthenticated()) {
+                    const hash = window.location.hash.substring(1) || 'home';
+                    showPage(hash);
+                }
+            });
+        }
+
+        function showPage(pageName) {
+            const pages = ['home', 'profile', 'guild-profile', 'tournaments', 'admin', 'login'];
+            pages.forEach(page => {
+                const element = document.getElementById(`page-${page}`);
+                if (element) {
+                    element.classList.add('hidden');
+                    element.classList.remove('active');
+                }
+            });
+            
+            const targetPage = document.getElementById(`page-${pageName}`);
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+                targetPage.classList.add('active', 'fade-in');
+                
+                switch(pageName) {
+                    case 'home':
+                        renderGuildHome();
+                        break;
+                    case 'profile':
+                        const uid = getCurrentUser()?.uid;
+                        if (uid) renderProfile(uid);
+                        break;
+                    case 'guild-profile':
+                        renderGuildProfile();
+                        break;
+                    case 'tournaments':
+                        renderTournaments();
+                        break;
+                    case 'admin':
+                        if (canAccessManagement()) {
+                            renderAdminDashboard();
+                        } else {
+                            showPage('home');
+                        }
+                        break;
+                    case 'login':
+                        renderLogin();
+                        break;
+                }
+            }
+        }
+
+        function navigateTo(page) {
+            window.location.hash = page;
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // ==================== COMPONENTS ====================
+
+        // Navbar Component
+        function renderNavbar() {
+            const navbar = document.getElementById('navbar');
+            const user = getCurrentUser();
+            const guildData = getGuildData();
+            
+            const pendingCount = guildData.players.filter(p => p.status === 'pending').length;
+            
+            navbar.innerHTML = `
+                <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
+                    <div class="container mx-auto flex flex-wrap items-center justify-between p-4">
+                        <a href="#home" class="flex items-center space-x-3 rtl:space-x-reverse">
+                            <span class="text-xl md:text-2xl font-semibold whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+                                Guild Hub
+                            </span>
+                        </a>
+                        
+                        ${user ? `
+                        <button id="mobile-menu-button" class="md:hidden inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-400 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600">
+                            <span class="sr-only">Open main menu</span>
+                            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"/>
+                            </svg>
+                        </button>
+                        
+                        <div id="mobile-menu" class="hidden w-full md:block md:w-auto">
+                            <ul class="font-medium flex flex-col p-4 md:p-0 mt-4 border border-gray-700 rounded-lg bg-gray-800 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0">
+                                <li><a href="#home" class="block py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">Home</a></li>
+                                <li><a href="#guild-profile" class="block py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">Guild Profile</a></li>
+                                <li><a href="#tournaments" class="block py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">Tournaments</a></li>
+                                <li><a href="#profile" class="block py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">My Profile</a></li>
+                                ${canAccessManagement() ? `
+                                <li>
+                                    <a href="#admin" class="block py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0 relative">
+                                        Management
+                                        ${pendingCount > 0 ? `
+                                        <span class="absolute top-1 -right-2 w-4 h-4 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                            ${pendingCount}
+                                        </span>
+                                        ` : ''}
+                                    </a>
+                                </li>
+                                ` : ''}
+                                <li><button onclick="logout()" class="block w-full text-left py-2 px-3 text-gray-300 rounded hover:bg-gray-700 md:hover:bg-transparent md:border-0 md:hover:text-red-400 md:p-0">Logout</button></li>
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                </nav>
+            `;
+
+            // Mobile menu functionality
+            document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            });
+        }
+
+        // Login Component
+        function renderLogin() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div id="page-login" class="page active fade-in">
+                    <div class="flex items-center justify-center min-h-[80vh]">
+                        <div class="w-full max-w-md p-8 space-y-8 bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700">
+                            <div>
+                                <h1 class="text-center text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+                                    FF MONSTER
+                                </h1>
+                                <p class="text-center text-gray-400 mt-1">Guild Hub Access</p>
+                            </div>
+
+                            <div class="flex border-b border-gray-600">
+                                <button id="login-tab" class="flex-1 py-2 text-lg font-bold transition-colors text-red-400 border-b-2 border-red-400">
+                                    Login
+                                </button>
+                                <button id="register-tab" class="flex-1 py-2 text-lg font-bold transition-colors text-gray-400">
+                                    Register
+                                </button>
+                            </div>
+                            
+                            <div id="error-message" class="hidden text-sm text-red-400 text-center animate-pulse"></div>
+                            <div id="success-message" class="hidden text-sm text-green-400 text-center"></div>
+
+                            <!-- Login Form -->
+                            <form id="login-form" class="space-y-6">
+                                <h2 class="text-2xl font-bold text-center text-white">Welcome Back</h2>
+                                <div>
+                                    <label for="email-login" class="block text-sm font-medium text-gray-300">Email</label>
+                                    <input id="email-login" type="email" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="your.email@example.com"/>
+                                </div>
+                                <div>
+                                    <label for="password-login" class="block text-sm font-medium text-gray-300">Password</label>
+                                    <input id="password-login" type="password" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="••••••••"/>
+                                </div>
+                                <button type="submit" class="w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium btn-glow">
+                                    Login
+                                </button>
+                            </form>
+
+                            <!-- Register Form -->
+                            <form id="register-form" class="space-y-4 hidden">
+                                <h2 class="text-2xl font-bold text-center text-white">Join the Guild</h2>
+                                <p class="text-center text-xs text-gray-400">Your account will be pending until approved by the Guild Leader.</p>
+                                <div>
+                                    <label for="uid-reg" class="block text-sm font-medium text-gray-300">In-Game UID</label>
+                                    <input id="uid-reg" type="text" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="e.g., 1234567890"/>
+                                </div>
+                                <div>
+                                    <label for="name-reg" class="block text-sm font-medium text-gray-300">In-Game Full Name</label>
+                                    <input id="name-reg" type="text" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="e.g., Shadow Striker"/>
+                                </div>
+                                <div>
+                                    <label for="email-reg" class="block text-sm font-medium text-gray-300">Email</label>
+                                    <input id="email-reg" type="email" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="your.email@example.com"/>
+                                </div>
+                                <div>
+                                    <label for="password-reg" class="block text-sm font-medium text-gray-300">Password</label>
+                                    <input id="password-reg" type="password" required class="w-full px-3 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field" placeholder="Choose a strong password"/>
+                                </div>
+                                <button type="submit" class="w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium btn-glow">
+                                    Submit for Approval
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners
+            document.getElementById('login-tab').addEventListener('click', switchToLogin);
+            document.getElementById('register-tab').addEventListener('click', switchToRegister);
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+
+            function switchToLogin() {
+                document.getElementById('login-tab').classList.add('text-red-400', 'border-b-2', 'border-red-400');
+                document.getElementById('login-tab').classList.remove('text-gray-400');
+                document.getElementById('register-tab').classList.add('text-gray-400');
+                document.getElementById('register-tab').classList.remove('text-red-400', 'border-b-2', 'border-red-400');
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+                clearMessages();
+            }
+
+            function switchToRegister() {
+                document.getElementById('register-tab').classList.add('text-red-400', 'border-b-2', 'border-red-400');
+                document.getElementById('register-tab').classList.remove('text-gray-400');
+                document.getElementById('login-tab').classList.add('text-gray-400');
+                document.getElementById('login-tab').classList.remove('text-red-400', 'border-b-2', 'border-red-400');
+                document.getElementById('register-form').classList.remove('hidden');
+                document.getElementById('login-form').classList.add('hidden');
+                clearMessages();
+            }
+
+            function clearMessages() {
+                document.getElementById('error-message').classList.add('hidden');
+                document.getElementById('success-message').classList.add('hidden');
+            }
+
+            async function handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('email-login').value;
+                const result = await signIn(email);
+                
+                if (result.success) {
+                    showLoginMessage('success', result.message);
+                    setTimeout(() => {
+                        renderNavbar();
+                        showPage('home');
+                    }, 1000);
+                } else {
+                    showLoginMessage('error', result.message);
+                }
+            }
+
+            async function handleRegister(e) {
+                e.preventDefault();
+                const uid = document.getElementById('uid-reg').value;
+                const name = document.getElementById('name-reg').value;
+                const email = document.getElementById('email-reg').value;
+                
+                if (!/^\d+$/.test(uid)) {
+                    showLoginMessage('error', 'UID must contain only numbers.');
+                    return;
+                }
+                
+                const result = await signUp({ uid, name, email });
+                
+                if (result.success) {
+                    showLoginMessage('success', result.message);
+                    setTimeout(() => {
+                        switchToLogin();
+                        document.getElementById('uid-reg').value = '';
+                        document.getElementById('name-reg').value = '';
+                        document.getElementById('email-reg').value = '';
+                        document.getElementById('password-reg').value = '';
+                    }, 2000);
+                } else {
+                    showLoginMessage('error', result.message);
+                }
+            }
+
+            function showLoginMessage(type, message) {
+                const errorEl = document.getElementById('error-message');
+                const successEl = document.getElementById('success-message');
+                
+                if (type === 'error') {
+                    errorEl.textContent = message;
+                    errorEl.classList.remove('hidden');
+                    successEl.classList.add('hidden');
+                } else {
+                    successEl.textContent = message;
+                    successEl.classList.remove('hidden');
+                    errorEl.classList.add('hidden');
+                }
+            }
+        }
+
+        // Guild Home Component
+        function renderGuildHome() {
+            const mainContent = document.getElementById('main-content');
+            const guildData = getGuildData();
+            const players = guildData.players;
+            
+            mainContent.innerHTML = `
+                <div id="page-home" class="page active fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h1 class="text-3xl md:text-4xl font-bold text-cyan-400 border-b-2 border-gray-700 pb-2 w-full md:w-auto">
+                            Guild Members
+                        </h1>
+                        <div class="w-full md:w-auto md:max-w-xs">
+                            <input
+                                type="text"
+                                id="search-members"
+                                placeholder="Search for a member..."
+                                class="w-full px-4 py-2 text-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 input-field"
+                            />
+                        </div>
+                    </div>
+
+                    <div id="members-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        ${players.map(player => `
+                            <div class="profile-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-red-500/50 transition-all duration-300">
+                                <div class="relative">
+                                    <img class="w-full h-48 object-cover" src="${player.profileScreenshot}" alt="${player.name}'s profile" />
+                                    <div class="absolute top-2 right-2 px-2 py-1 text-xs font-bold rounded-full ${player.status === 'verified' ? 'bg-green-500 text-green-100' : 'bg-yellow-500 text-yellow-100'} capitalize flex items-center gap-1">
+                                        ${player.status === 'verified' ? '✓ Verified' : '⏳ Pending'}
+                                    </div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                    <div class="absolute bottom-0 left-0 p-4">
+                                        <h3 class="text-xl font-bold text-white flex items-center">
+                                            ${player.name}
+                                            ${player.role === ROLES.LEADER ? '<span class="ml-2 text-xl">👑</span>' : ''}
+                                        </h3>
+                                        <p class="text-sm text-gray-300">${player.role}</p>
+                                    </div>
+                                </div>
+                                ${player.badges && player.badges.length > 0 && player.role !== ROLES.LEADER ? `
+                                    <div class="p-2 bg-gray-900/50 flex flex-wrap gap-2 justify-center">
+                                        ${player.badges.map(badgeName => {
+                                            const badge = BADGE_DEFINITIONS[badgeName];
+                                            return badge ? `<span title="${badge.description}" class="text-xl">${badge.icon}</span>` : '';
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            // Search functionality
+            document.getElementById('search-members').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const members = guildData.players;
+                const filteredMembers = searchTerm ? 
+                    members.filter(player => player.name.toLowerCase().includes(searchTerm)) : 
+                    members;
+                
+                document.getElementById('members-grid').innerHTML = filteredMembers.map(player => `
+                    <div class="profile-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-red-500/50 transition-all duration-300">
+                        <div class="relative">
+                            <img class="w-full h-48 object-cover" src="${player.profileScreenshot}" alt="${player.name}'s profile" />
+                            <div class="absolute top-2 right-2 px-2 py-1 text-xs font-bold rounded-full ${player.status === 'verified' ? 'bg-green-500 text-green-100' : 'bg-yellow-500 text-yellow-100'} capitalize flex items-center gap-1">
+                                ${player.status === 'verified' ? '✓ Verified' : '⏳ Pending'}
+                            </div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-4">
+                                <h3 class="text-xl font-bold text-white flex items-center">
+                                    ${player.name}
+                                    ${player.role === ROLES.LEADER ? '<span class="ml-2 text-xl">👑</span>' : ''}
+                                </h3>
+                                <p class="text-sm text-gray-300">${player.role}</p>
+                            </div>
+                        </div>
+                        ${player.badges && player.badges.length > 0 && player.role !== ROLES.LEADER ? `
+                            <div class="p-2 bg-gray-900/50 flex flex-wrap gap-2 justify-center">
+                                ${player.badges.map(badgeName => {
+                                    const badge = BADGE_DEFINITIONS[badgeName];
+                                    return badge ? `<span title="${badge.description}" class="text-xl">${badge.icon}</span>` : '';
+                                }).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            });
+        }
+
+        // Guild Profile Component
+        function renderGuildProfile() {
+            const mainContent = document.getElementById('main-content');
+            const guildData = getGuildData();
+            const user = getCurrentUser();
+            const canEdit = user?.permissions.canEditGuildProfile;
+            
+            mainContent.innerHTML = `
+                <div id="page-guild-profile" class="page active fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="flex justify-between items-center border-b-2 border-gray-700 pb-2 mb-6">
+                            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+                                Guild Profile
+                            </h1>
+                            ${canEdit ? `
+                                <button onclick="enableGuildEdit()" class="px-6 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">Edit</button>
+                            ` : ''}
+                        </div>
+
+                        <div class="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-gray-700">
+                            <img 
+                                src="${guildData.guildInfo.image}" 
+                                alt="Guild Banner"
+                                class="w-full h-48 object-cover"
+                                id="guild-banner"
+                            />
+                            <div class="p-6 md:p-8" id="guild-profile-content">
+                                <div class="text-center">
+                                    <h2 class="text-4xl font-extrabold text-white mb-2">${guildData.guildInfo.name}</h2>
+                                    <p class="text-lg text-gray-400 mb-6">
+                                        Guild ID: <span class="font-semibold text-red-400">${guildData.guildInfo.id}</span>
+                                    </p>
+
+                                    <a
+                                        href="${guildData.guildInfo.joinLink}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-block px-10 py-3 rounded-lg bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white font-bold text-lg transition-all transform hover:scale-105 shadow-lg btn-glow"
+                                    >
+                                        Join Guild
+                                    </a>
+                                    
+                                    <div class="mt-8 text-left text-gray-300">
+                                        <h3 class="text-xl font-bold mb-4 text-white">About Us</h3>
+                                        <p class="whitespace-pre-wrap">${guildData.guildInfo.about}</p>
+                                        <h3 class="text-xl font-bold mb-4 mt-6 text-white">Rules</h3>
+                                        <ul class="list-disc list-inside space-y-2">
+                                            ${guildData.guildInfo.rules.map(rule => `<li>${rule}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function enableGuildEdit() {
+            const guildData = getGuildData();
+            const content = document.getElementById('guild-profile-content');
+            
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Guild Name</label>
+                        <input type="text" id="guild-name" value="${guildData.guildInfo.name}" class="w-full p-2 rounded input-field text-3xl"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">About Us</label>
+                        <textarea id="guild-about" class="w-full p-2 rounded input-field h-32">${guildData.guildInfo.about}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Rules</label>
+                        <div id="rules-container" class="space-y-2">
+                            ${guildData.guildInfo.rules.map((rule, index) => `
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="${rule}" data-index="${index}" class="rule-input w-full p-2 rounded input-field"/>
+                                    <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="addRule()" class="mt-2 text-sm text-cyan-400 hover:text-cyan-300">+ Add Rule</button>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <button onclick="cancelGuildEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500">Cancel</button>
+                        <button onclick="saveGuildInfo()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 btn-glow">Save</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addRule() {
+            const container = document.getElementById('rules-container');
+            const index = container.children.length;
+            container.innerHTML += `
+                <div class="flex items-center gap-2">
+                    <input type="text" value="" data-index="${index}" class="rule-input w-full p-2 rounded input-field" placeholder="New rule"/>
+                    <button onclick="removeRule(${index})" class="bg-red-800 hover:bg-red-700 text-white font-bold p-2 rounded aspect-square">-</button>
+                </div>
+            `;
+        }
+
+        function removeRule(index) {
+            const inputs = document.querySelectorAll('.rule-input');
+            if (inputs.length > 1) {
+                inputs[index].parentElement.remove();
+                // Reindex remaining inputs
+                document.querySelectorAll('.rule-input').forEach((input, i) => {
+                    input.setAttribute('data-index', i);
+                });
+            }
+        }
+
+        function cancelGuildEdit() {
+            renderGuildProfile();
+        }
+
+        function saveGuildInfo() {
+            const name = document.getElementById('guild-name').value;
+            const about = document.getElementById('guild-about').value;
+            const rules = Array.from(document.querySelectorAll('.rule-input')).map(input => input.value).filter(rule => rule.trim() !== '');
+            
+            const newInfo = {
+                ...getGuildData().guildInfo,
+                name,
+                about,
+                rules
+            };
+            
+            updateGuildInfo(newInfo);
+            renderGuildProfile();
+        }
+
+        // Profile Component
+        function renderProfile(uid) {
+            const player = getPlayerByUid(uid);
+            const user = getCurrentUser();
+            const canEdit = user?.uid === ADMIN_UID || user?.uid === player?.uid;
+            const isAdmin = user?.uid === ADMIN_UID;
+            
+            if (!player) {
+                showPage('home');
+                return;
+            }
+
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div id="page-profile" class="page active fade-in">
+                    <div class="max-w-5xl mx-auto bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+                        <!-- Cover and Profile Picture -->
+                        <div class="relative h-48 md:h-64 bg-gray-700">
+                            <img 
+                                src="${player.coverPhoto}" 
+                                alt="${player.name}'s cover photo"
+                                class="w-full h-full object-cover"
+                                id="cover-photo"
+                            />
+                            ${canEdit ? `
+                                <label for="cover-upload" class="absolute top-4 right-4 bg-gray-900/50 p-2 rounded-full cursor-pointer hover:bg-gray-900/80 transition-colors">
+                                    📷
+                                    <input id="cover-upload" type="file" class="hidden" accept="image/*" onchange="handleFileChange(event, 'cover')" />
+                                </label>
+                            ` : ''}
+
+                            <div class="absolute -bottom-16 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0">
+                                <div class="w-32 h-32 md:w-40 md:h-40 relative rounded-full border-4 border-red-500 bg-gray-800">
+                                    <img
+                                        src="${player.profileScreenshot}"
+                                        alt="${player.name}'s profile"
+                                        class="w-full h-full rounded-full object-cover"
+                                        id="profile-pic"
+                                    />
+                                    <p class="absolute -bottom-2 -right-2 text-3xl" title="${player.role === ROLES.LEADER ? BADGE_DEFINITIONS['Guild Leader'].description : ''}">
+                                        ${player.role === ROLES.LEADER ? BADGE_DEFINITIONS['Guild Leader'].icon : ''}
+                                    </p>
+                                    ${canEdit ? `
+                                        <label for="profile-upload" class="absolute bottom-1 right-1 bg-gray-700 p-2 rounded-full cursor-pointer hover:bg-gray-600 transition-colors">
+                                            ✏️
+                                            <input id="profile-upload" type="file" class="hidden" accept="image/*" onchange="handleFileChange(event, 'profile')" />
+                                        </label>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Info -->
+                        <div class="pt-20 md:pt-8 md:pl-60 p-6">
+                            <div class="flex flex-col md:flex-row justify-between items-start">
+                                <div class='text-center md:text-left'>
+                                    <h1 class="text-4xl font-bold text-white inline-flex items-center">
+                                        ${player.name}
+                                        ${player.status === 'verified' ? '✓' : ''}
+                                    </h1>
+                                    <p class="text-sm mt-1 font-bold ${player.status === 'verified' ? 'text-green-400' : 'text-yellow-400'}">
+                                        ${player.status === 'verified' ? 'Verified Member' : 'Pending Approval'}
+                                    </p>
+                                    <p class="text-lg text-gray-400 mt-2">UID: ${player.uid}</p>
+                                    <p class="text-xl text-red-400 font-semibold mt-2">${player.role}</p>
+                                </div>
+                                ${canEdit && !window.profileEditMode ? `
+                                    <button onclick="enableProfileEdit()" class="mt-4 md:mt-0 px-6 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors flex-shrink-0">Edit Profile</button>
+                                ` : ''}
+                            </div>
+                            
+                            <!-- Badges Display -->
+                            ${player.badges && player.badges.length > 0 ? `
+                                <div class="mt-6 flex flex-wrap gap-2 items-center">
+                                    ${player.badges.map(badgeName => {
+                                        const badge = BADGE_DEFINITIONS[badgeName];
+                                        if (!badge) return '';
+                                        return `
+                                            <span title="${badge.description}" class="flex items-center gap-2 text-sm font-bold px-3 py-1 rounded-full ${badge.color}">
+                                                <span>${badge.icon}</span>
+                                                <span>${badgeName}</span>
+                                            </span>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
+
+                            <!-- Bio Display -->
+                            <div class="mt-8 pt-6 border-t border-gray-700">
+                                <h2 class="text-xl font-semibold mb-2">Bio</h2>
+                                <p class="text-gray-300 whitespace-pre-wrap">${player.bio || 'No bio provided.'}</p>
+                            </div>
+
+                            <!-- Social Links Display -->
+                            ${Object.values(player.socials).some(link => link) ? `
+                                <div class="mt-8 pt-6 border-t border-gray-700">
+                                    <h2 class="text-xl font-semibold mb-4">Connect</h2>
+                                    <div class="flex flex-wrap gap-4">
+                                        ${Object.entries(player.socials).map(([platform, link]) => 
+                                            link ? `<a href="${link}" target="_blank" class="text-gray-400 hover:text-red-400 transition-colors">${platform}</a>` : ''
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            window.profileEditMode = false;
+        }
+
+        function enableProfileEdit() {
+            window.profileEditMode = true;
+            const player = getPlayerByUid(getCurrentUser().uid);
+            
+            document.querySelector('#page-profile .pt-20').innerHTML = `
+                <div class="flex flex-col md:flex-row justify-between items-start">
+                    <div class='text-center md:text-left w-full'>
+                        <input type="text" id="edit-name" value="${player.name}" class="text-4xl font-bold rounded p-2 w-full input-field"/>
+                        <p class="text-lg text-gray-400 mt-2">UID: ${player.uid}</p>
+                        <input type="text" id="edit-role" value="${player.role}" ${getCurrentUser().uid !== ADMIN_UID ? 'disabled' : ''} class="text-xl rounded p-2 w-full input-field"/>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-2">
+                        <button onclick="saveProfile()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 btn-glow">Save</button>
+                        <button onclick="cancelProfileEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500">Cancel</button>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-gray-700 space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-2">Edit Bio</h2>
+                        <textarea id="edit-bio" class="w-full h-28 resize-y p-2 rounded input-field">${player.bio || ''}</textarea>
+                    </div>
+                    
+                    <div class="mt-8 flex justify-end gap-4">
+                        <button onclick="cancelProfileEdit()" class="px-6 py-2 rounded bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>
+                        <button onclick="saveProfile()" class="px-6 py-2 rounded bg-red-600 hover:bg-red-500 transition-colors btn-glow">Save Changes</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cancelProfileEdit() {
+            window.profileEditMode = false;
+            renderProfile(getCurrentUser().uid);
+        }
+
+        function saveProfile() {
+            const player = getPlayerByUid(getCurrentUser().uid);
+            const updatedPlayer = {
+                ...player,
+                name: document.getElementById('edit-name').value,
+                role: document.getElementById('edit-role').value,
+                bio: document.getElementById('edit-bio').value
+            };
+            
+            updatePlayer(updatedPlayer);
+            setCurrentUser(updatedPlayer);
+            window.profileEditMode = false;
+            renderProfile(getCurrentUser().uid);
+        }
+
+        function handleFileChange(event, type) {
+            // This is a simplified version - in a real app you'd upload to a server
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (type === 'cover') {
+                        document.getElementById('cover-photo').src = e.target.result;
+                    } else {
+                        document.getElementById('profile-pic').src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal-backdrop')) {
+                event.target.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
