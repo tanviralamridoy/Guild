@@ -121,12 +121,59 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Tournament Card Styles */
+        .tournament-card {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .tournament-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.2);
+        }
+
+        .countdown-timer {
+            font-family: 'Courier New', monospace;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #ef4444, #f59e0b);
+        }
+
+        /* Admin Dashboard Styles */
+        .stat-card {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Notification Styles */
+        .notification-badge {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+            60% { transform: translateY(-3px); }
+        }
+
         /* Mobile Navigation */
         @media (max-width: 768px) {
             .mobile-nav {
                 background: rgba(17, 24, 39, 0.95);
                 backdrop-filter: blur(10px);
             }
+        }
+
+        /* Particle Background */
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
         }
     </style>
 </head>
@@ -141,6 +188,9 @@
 
     <!-- Mobile Bottom Navigation -->
     <div id="mobile-nav" class="fixed bottom-0 left-0 right-0 md:hidden mobile-nav border-t border-gray-700/50"></div>
+
+    <!-- Notification Center -->
+    <div id="notification-center" class="fixed top-20 right-4 z-50 w-80 max-w-full hidden"></div>
 
     <script>
         // ==================== ENHANCED CONSTANTS ====================
@@ -163,6 +213,366 @@
             'Member': { level: 'Silver', color: 'bg-gradient-to-r from-gray-400 to-gray-600' }
         };
 
+        const TOURNAMENT_TYPES = ['BR', 'CS', 'Clash Squad', 'Custom Room'];
+        const TOURNAMENT_MODES = ['Solo', 'Duo', 'Squad'];
+        const TOURNAMENT_MAPS = ['Bermuda', 'Kalahari', 'Purgatory', 'Alpine', 'NeXTerra'];
+
+        // ==================== ENHANCED DATA MANAGEMENT ====================
+        let guildData = {
+            guildInfo: {
+                name: "FF MONSTER",
+                id: "3023945535",
+                joinLink: "https://ff.garena.com/guild/3023945535",
+                image: "https://picsum.photos/seed/guild-monster/1200/400",
+                about: "Welcome to FF MONSTER! We are a competitive and friendly guild aiming for the top. We value teamwork, skill, and sportsmanship. Join us to participate in tournaments, custom rooms, and daily scrims.",
+                rules: [
+                    "Active participation in guild wars is mandatory.",
+                    "Respect all members.",
+                    "Minimum rank requirement: Heroic.",
+                    "Discord is required for communication."
+                ],
+                stats: {
+                    totalMembers: 0,
+                    tournamentsWon: 12,
+                    guildLevel: 8,
+                    winRate: 76
+                }
+            },
+            players: [
+                {
+                    uid: ADMIN_UID,
+                    name: ADMIN_NAME,
+                    email: 'leader@ffmonster.com',
+                    role: 'Leader',
+                    profileScreenshot: 'https://picsum.photos/seed/leader/400',
+                    coverPhoto: 'https://picsum.photos/seed/leader-cover/800/300',
+                    socials: {
+                        facebook: 'https://facebook.com',
+                        instagram: 'https://instagram.com',
+                        youtube: 'https://youtube.com',
+                    },
+                    bio: 'Leading FF MONSTER to victory! Passionate gamer, strategist, and proud leader of this amazing guild.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: true,
+                        canManageTournaments: true,
+                        canEditGuildProfile: true,
+                        canKickMembers: true,
+                    },
+                    badges: ['Guild Leader'],
+                    stats: {
+                        matches: 450,
+                        kills: 2150,
+                        wins: 180,
+                        kd: 4.78
+                    }
+                },
+                {
+                    uid: '1234567890',
+                    name: 'Shadow Striker',
+                    email: 'acting@ffmonster.com',
+                    role: 'Acting Guild Leader',
+                    profileScreenshot: 'https://picsum.photos/seed/acting/400',
+                    coverPhoto: 'https://picsum.photos/seed/acting-cover/800/300',
+                    socials: {},
+                    bio: 'Second in command, first in headshots.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: false,
+                        canManageTournaments: false,
+                        canEditGuildProfile: false,
+                        canKickMembers: false,
+                    },
+                    badges: ['Veteran'],
+                    stats: {
+                        matches: 320,
+                        kills: 1450,
+                        wins: 95,
+                        kd: 4.53
+                    }
+                },
+                {
+                    uid: '0987654321',
+                    name: 'Viper',
+                    email: 'elder1@ffmonster.com',
+                    role: 'Elder',
+                    profileScreenshot: 'https://picsum.photos/seed/elder1/400',
+                    coverPhoto: 'https://picsum.photos/seed/elder1-cover/800/300',
+                    socials: {},
+                    bio: 'Veteran player, here to guide and dominate.',
+                    status: 'verified',
+                    permissions: {
+                        canVerifyMembers: false,
+                        canManageTournaments: false,
+                        canEditGuildProfile: false,
+                        canKickMembers: false,
+                    },
+                    badges: ['Veteran', 'Strategist'],
+                    stats: {
+                        matches: 560,
+                        kills: 2780,
+                        wins: 210,
+                        kd: 4.96
+                    }
+                },
+            ],
+            tournaments: [
+                {
+                    id: '1',
+                    name: 'MONSTER Mayhem Championship',
+                    date: '2024-02-15T18:00:00',
+                    description: 'Monthly guild championship with amazing prizes. Show your skills and dominate the battlefield!',
+                    type: 'BR',
+                    mode: 'Squad',
+                    map: 'Bermuda',
+                    maxPlayers: 52,
+                    participants: [],
+                    status: 'upcoming'
+                },
+                {
+                    id: '2',
+                    name: 'Clash Squad Showdown',
+                    date: '2024-02-10T20:00:00',
+                    description: 'Fast-paced Clash Squad tournament. Perfect for players who love intense combat!',
+                    type: 'Clash Squad',
+                    mode: 'Squad',
+                    map: 'Kalahari',
+                    maxPlayers: 32,
+                    participants: [],
+                    status: 'upcoming'
+                }
+            ],
+            notifications: []
+        };
+
+        function getGuildData() {
+            const saved = localStorage.getItem('guildData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    // Update stats
+                    data.guildInfo.stats.totalMembers = data.players.length;
+                    return data;
+                } catch (e) {
+                    console.error('Error parsing guild data:', e);
+                }
+            }
+            // Update stats for initial data
+            guildData.guildInfo.stats.totalMembers = guildData.players.length;
+            return guildData;
+        }
+
+        function saveGuildData() {
+            localStorage.setItem('guildData', JSON.stringify(guildData));
+        }
+
+        function getPlayerByUid(uid) {
+            const data = getGuildData();
+            return data.players.find(p => p.uid === uid);
+        }
+
+        function getPlayerByEmail(email) {
+            const data = getGuildData();
+            return data.players.find(p => p.email.toLowerCase() === email.toLowerCase());
+        }
+
+        function updatePlayer(updatedPlayer) {
+            const data = getGuildData();
+            data.players = data.players.map(p => 
+                p.uid === updatedPlayer.uid ? updatedPlayer : p
+            );
+            guildData = data;
+            saveGuildData();
+        }
+
+        function registerPlayer(newPlayerData) {
+            const data = getGuildData();
+            const playerWithDefaults = {
+                ...newPlayerData,
+                profileScreenshot: `https://picsum.photos/seed/${newPlayerData.uid}/400`,
+                coverPhoto: `https://picsum.photos/seed/cover-${newPlayerData.uid}/800/300`,
+                socials: {},
+                role: 'Member',
+                bio: '',
+                status: 'pending',
+                permissions: {
+                    canVerifyMembers: false,
+                    canManageTournaments: false,
+                    canEditGuildProfile: false,
+                    canKickMembers: false,
+                },
+                badges: [],
+                stats: {
+                    matches: 0,
+                    kills: 0,
+                    wins: 0,
+                    kd: 0
+                }
+            };
+            data.players.push(playerWithDefaults);
+            guildData = data;
+            saveGuildData();
+            return playerWithDefaults;
+        }
+
+        function addTournament(tournamentData) {
+            const data = getGuildData();
+            const newTournament = {
+                ...tournamentData,
+                id: Date.now().toString(),
+                participants: [],
+                status: 'upcoming'
+            };
+            data.tournaments.push(newTournament);
+            guildData = data;
+            saveGuildData();
+            return newTournament;
+        }
+
+        function registerForTournament(tournamentId, playerId) {
+            const data = getGuildData();
+            data.tournaments = data.tournaments.map(t => {
+                if (t.id === tournamentId && !t.participants.includes(playerId)) {
+                    return { ...t, participants: [...t.participants, playerId] };
+                }
+                return t;
+            });
+            guildData = data;
+            saveGuildData();
+        }
+
+        // ==================== AUTHENTICATION ====================
+        let currentUser = null;
+
+        function getCurrentUser() {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    const userExists = getPlayerByEmail(currentUser?.email);
+                    if (!userExists) {
+                        currentUser = null;
+                        localStorage.removeItem('currentUser');
+                    }
+                } catch (e) {
+                    currentUser = null;
+                    localStorage.removeItem('currentUser');
+                }
+            }
+            return currentUser;
+        }
+
+        function setCurrentUser(user) {
+            currentUser = user;
+            if (user) {
+                localStorage.setItem('currentUser', JSON.stringify(user));
+            } else {
+                localStorage.removeItem('currentUser');
+            }
+        }
+
+        function signIn(email, password) {
+            return new Promise((resolve) => {
+                const user = getPlayerByEmail(email);
+                if (!user) {
+                    resolve({ success: false, message: "No account found with this email." });
+                    return;
+                }
+                if (user.status === 'pending') {
+                    resolve({ success: false, message: "Your account is pending verification by the guild leader." });
+                    return;
+                }
+                setCurrentUser(user);
+                resolve({ success: true, message: "Login successful!" });
+            });
+        }
+
+        function signUp(userData) {
+            return new Promise((resolve) => {
+                if (getPlayerByEmail(userData.email) || getPlayerByUid(userData.uid)) {
+                    resolve({ success: false, message: "An account with this email or UID already exists." });
+                    return;
+                }
+                const newPlayer = registerPlayer(userData);
+                resolve({ success: true, message: "Registration successful! An admin will verify your account shortly." });
+            });
+        }
+
+        function logout() {
+            setCurrentUser(null);
+            showPage('login');
+            renderNavbar();
+            renderMobileNav();
+        }
+
+        function isAuthenticated() {
+            return getCurrentUser() !== null;
+        }
+
+        function canAccessManagement() {
+            const user = getCurrentUser();
+            return user && Object.values(user.permissions).some(p => p === true);
+        }
+
+        // ==================== NOTIFICATION SYSTEM ====================
+        function showNotification(message, type = 'info') {
+            const notificationCenter = document.getElementById('notification-center');
+            const notificationId = 'notification-' + Date.now();
+            
+            const notification = document.createElement('div');
+            notification.id = notificationId;
+            notification.className = `glass-effect rounded-lg p-4 mb-2 border-l-4 ${
+                type === 'success' ? 'border-green-500' : 
+                type === 'error' ? 'border-red-500' : 
+                type === 'warning' ? 'border-yellow-500' : 'border-blue-500'
+            } transform translate-x-full opacity-0 transition-all duration-300`;
+            
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-${
+                            type === 'success' ? 'check-circle' : 
+                            type === 'error' ? 'exclamation-circle' : 
+                            type === 'warning' ? 'exclamation-triangle' : 'info-circle'
+                        } text-${type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-400 mr-3"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button onclick="closeNotification('${notificationId}')" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            notificationCenter.appendChild(notification);
+            notificationCenter.classList.remove('hidden');
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+                notification.classList.remove('opacity-0');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                closeNotification(notificationId);
+            }, 5000);
+        }
+
+        function closeNotification(notificationId) {
+            const notification = document.getElementById(notificationId);
+            if (notification) {
+                notification.classList.add('translate-x-full');
+                notification.classList.add('opacity-0');
+                setTimeout(() => {
+                    notification.remove();
+                    const remaining = document.getElementById('notification-center').children;
+                    if (remaining.length === 0) {
+                        document.getElementById('notification-center').classList.add('hidden');
+                    }
+                }, 300);
+            }
+        }
+
         // ==================== ENHANCED NAVBAR COMPONENT ====================
         function renderNavbar() {
             const navbar = document.getElementById('navbar');
@@ -170,6 +580,7 @@
             const data = getGuildData();
             
             const pendingCount = data.players.filter(p => p.status === 'pending').length;
+            const notificationCount = data.notifications ? data.notifications.filter(n => !n.read).length : 0;
             
             navbar.innerHTML = `
                 <div class="container mx-auto px-4">
@@ -207,6 +618,20 @@
                                     <span>Profile</span>
                                     <div class="nav-underline"></div>
                                 </a>
+                                
+                                <!-- Notifications -->
+                                <div class="relative group">
+                                    <button class="nav-link relative">
+                                        <i class="fas fa-bell mr-2"></i>
+                                        <span>Notifications</span>
+                                        ${notificationCount > 0 ? `
+                                            <span class="notification-badge absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                                ${notificationCount}
+                                            </span>
+                                        ` : ''}
+                                    </button>
+                                </div>
+
                                 ${canAccessManagement() ? `
                                     <a href="#admin" class="nav-link group relative">
                                         <i class="fas fa-cog mr-2"></i>
@@ -219,6 +644,7 @@
                                         <div class="nav-underline"></div>
                                     </a>
                                 ` : ''}
+                                
                                 <div class="relative group">
                                     <button class="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors">
                                         <div class="w-8 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center">
@@ -311,53 +737,83 @@
                 mobileMenuButton.addEventListener('click', function() {
                     const menu = document.getElementById('mobile-menu');
                     menu.classList.toggle('hidden');
-                    menu.classList.toggle('animate-slideInDown');
                 });
             }
         }
 
-        // ==================== ENHANCED MEMBER CARDS ====================
+        // ==================== ENHANCED HERO SECTION ====================
         function renderGuildHome() {
             const mainContent = document.getElementById('main-content');
             const data = getGuildData();
             const players = data.players;
             
-            // Show loading skeleton first
             mainContent.innerHTML = `
                 <div id="page-home" class="page active">
-                    <!-- Enhanced Header -->
-                    <div class="relative overflow-hidden bg-gradient-to-br from-gray-900 to-black py-16 mb-8">
-                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534423861386-85a16f5d13fd?ixlib=rb-4.0.3')] bg-cover bg-center opacity-20"></div>
+                    <!-- Enhanced Hero Section -->
+                    <div class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-red-900/20 to-black py-20 mb-8">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534423861386-85a16f5d13fd?ixlib=rb-4.0.3')] bg-cover bg-center opacity-10"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-gray-900/80"></div>
+                        
                         <div class="relative container mx-auto px-4 text-center">
-                            <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                            <!-- Animated Logo -->
+                            <div class="mb-6">
+                                <div class="w-24 h-24 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl transform hover:scale-110 transition-transform duration-300">
+                                    <span class="text-white font-bold text-3xl">FF</span>
+                                </div>
+                            </div>
+                            
+                            <h1 class="text-6xl md:text-7xl font-bold mb-6">
                                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 animate-pulse">
                                     FF MONSTER
                                 </span>
                             </h1>
-                            <p class="text-xl text-gray-300 mb-8">Elite Free Fire Guild Community</p>
-                            <div class="flex justify-center items-center space-x-8 text-center">
-                                <div class="text-center">
-                                    <div class="text-3xl font-bold text-white">${players.length}</div>
-                                    <div class="text-gray-400">Total Members</div>
+                            <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto">
+                                Elite Free Fire Guild Community • Dominating Since 2023
+                            </p>
+                            
+                            <!-- Guild Stats -->
+                            <div class="flex justify-center items-center space-x-8 md:space-x-12 text-center mb-8">
+                                <div class="text-center transform hover:scale-110 transition-transform duration-300">
+                                    <div class="text-4xl font-bold text-white">${players.length}</div>
+                                    <div class="text-gray-400 text-sm">Total Members</div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-3xl font-bold text-green-400">${players.filter(p => p.status === 'verified').length}</div>
-                                    <div class="text-gray-400">Active</div>
+                                <div class="text-center transform hover:scale-110 transition-transform duration-300">
+                                    <div class="text-4xl font-bold text-green-400">${players.filter(p => p.status === 'verified').length}</div>
+                                    <div class="text-gray-400 text-sm">Active Players</div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-3xl font-bold text-yellow-400">${players.filter(p => p.status === 'pending').length}</div>
-                                    <div class="text-gray-400">Pending</div>
+                                <div class="text-center transform hover:scale-110 transition-transform duration-300">
+                                    <div class="text-4xl font-bold text-yellow-400">${data.tournaments.length}</div>
+                                    <div class="text-gray-400 text-sm">Tournaments</div>
+                                </div>
+                                <div class="text-center transform hover:scale-110 transition-transform duration-300">
+                                    <div class="text-4xl font-bold text-blue-400">${data.guildInfo.stats.winRate}%</div>
+                                    <div class="text-gray-400 text-sm">Win Rate</div>
                                 </div>
                             </div>
+                            
+                            <!-- CTA Buttons -->
+                            <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                                <a href="#guild-profile" class="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg btn-glow text-lg font-bold transform hover:scale-105 transition-all duration-300">
+                                    <i class="fas fa-users mr-2"></i>Join Our Guild
+                                </a>
+                                <a href="#tournaments" class="px-8 py-4 glass-effect border border-orange-500/50 rounded-lg text-lg font-bold transform hover:scale-105 transition-all duration-300">
+                                    <i class="fas fa-trophy mr-2"></i>View Tournaments
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Scroll Indicator -->
+                        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 animate-bounce">
+                            <i class="fas fa-chevron-down text-2xl text-gray-400"></i>
                         </div>
                     </div>
 
                     <div class="container mx-auto px-4">
                         <!-- Search and Filter Header -->
-                        <div class="glass-effect rounded-xl p-6 mb-8">
+                        <div class="glass-effect rounded-2xl p-6 mb-8">
                             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <h2 class="text-2xl md:text-3xl font-bold text-cyan-400">
-                                    Guild Members
+                                    <i class="fas fa-users mr-3"></i>Guild Members
                                 </h2>
                                 <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
                                     <div class="relative w-full md:w-64">
@@ -375,6 +831,11 @@
                                         <option value="Acting Guild Leader">Acting Leader</option>
                                         <option value="Elder">Elder</option>
                                         <option value="Member">Member</option>
+                                    </select>
+                                    <select id="status-filter" class="px-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500">
+                                        <option value="">All Status</option>
+                                        <option value="verified">Verified</option>
+                                        <option value="pending">Pending</option>
                                     </select>
                                 </div>
                             </div>
@@ -399,14 +860,6 @@
             const isLeader = player.role === 'Leader';
             const isVerified = player.status === 'verified';
             
-            // Mock stats for card back
-            const mockStats = {
-                matches: Math.floor(Math.random() * 200) + 50,
-                kills: Math.floor(Math.random() * 1000) + 200,
-                wins: Math.floor(Math.random() * 50) + 10,
-                kd: (Math.random() * 3 + 1).toFixed(2)
-            };
-
             return `
                 <div class="member-card group">
                     <div class="member-card-inner">
@@ -484,28 +937,28 @@
                                     <div class="space-y-3">
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-400">Matches</span>
-                                            <span class="text-white font-bold">${mockStats.matches}</span>
+                                            <span class="text-white font-bold">${player.stats.matches}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-400">Kills</span>
-                                            <span class="text-white font-bold">${mockStats.kills}</span>
+                                            <span class="text-white font-bold">${player.stats.kills}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-400">Wins</span>
-                                            <span class="text-white font-bold">${mockStats.wins}</span>
+                                            <span class="text-white font-bold">${player.stats.wins}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-400">K/D Ratio</span>
-                                            <span class="text-white font-bold">${mockStats.kd}</span>
+                                            <span class="text-white font-bold">${player.stats.kd}</span>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <div class="text-center">
                                     <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
-                                        <div class="bg-gradient-to-r from-green-400 to-cyan-500 h-2 rounded-full" style="width: ${(mockStats.wins / mockStats.matches * 100).toFixed(0)}%"></div>
+                                        <div class="bg-gradient-to-r from-green-400 to-cyan-500 h-2 rounded-full" style="width: ${(player.stats.wins / player.stats.matches * 100).toFixed(0)}%"></div>
                                     </div>
-                                    <p class="text-xs text-gray-400">Win Rate: ${(mockStats.wins / mockStats.matches * 100).toFixed(1)}%</p>
+                                    <p class="text-xs text-gray-400">Win Rate: ${player.stats.matches > 0 ? ((player.stats.wins / player.stats.matches * 100).toFixed(1)) : 0}%</p>
                                 </div>
                             </div>
                         </div>
@@ -514,13 +967,812 @@
             `;
         }
 
+        // ==================== ENHANCED TOURNAMENTS PAGE ====================
+        function renderTournaments() {
+            const mainContent = document.getElementById('main-content');
+            const data = getGuildData();
+            const user = getCurrentUser();
+            const canManage = user?.permissions.canManageTournaments;
+            
+            mainContent.innerHTML = `
+                <div id="page-tournaments" class="page active">
+                    <!-- Hero Section -->
+                    <div class="relative bg-gradient-to-br from-purple-900/30 via-gray-900 to-black py-16 mb-8">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3')] bg-cover bg-center opacity-20"></div>
+                        <div class="relative container mx-auto px-4 text-center">
+                            <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+                                    Tournaments
+                                </span>
+                            </h1>
+                            <p class="text-xl text-gray-300 mb-8">Compete, Win, and Dominate the Battlefield</p>
+                        </div>
+                    </div>
+
+                    <div class="container mx-auto px-4">
+                        <!-- Create Tournament Button -->
+                        ${canManage ? `
+                            <div class="flex justify-between items-center mb-8">
+                                <h2 class="text-3xl font-bold text-red-400">
+                                    <i class="fas fa-trophy mr-3"></i>Active Tournaments
+                                </h2>
+                                <button onclick="showCreateTournamentModal()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg btn-glow font-bold">
+                                    <i class="fas fa-plus mr-2"></i>Create Tournament
+                                </button>
+                            </div>
+                        ` : `
+                            <h2 class="text-3xl font-bold text-red-400 mb-8">
+                                <i class="fas fa-trophy mr-3"></i>Active Tournaments
+                            </h2>
+                        `}
+
+                        <!-- Tournaments Grid -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+                            ${data.tournaments.map(tournament => createTournamentCard(tournament)).join('')}
+                        </div>
+
+                        <!-- Tournament Stats -->
+                        <div class="glass-effect rounded-2xl p-6 mb-8">
+                            <h3 class="text-2xl font-bold text-cyan-400 mb-6">Tournament Statistics</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-white">${data.tournaments.length}</div>
+                                    <div class="text-gray-400">Total Tournaments</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-green-400">${data.tournaments.filter(t => t.status === 'completed').length}</div>
+                                    <div class="text-gray-400">Completed</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-yellow-400">${data.tournaments.filter(t => t.status === 'upcoming').length}</div>
+                                    <div class="text-gray-400">Upcoming</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-blue-400">${Math.max(...data.tournaments.map(t => t.participants.length))}</div>
+                                    <div class="text-gray-400">Max Participants</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create Tournament Modal -->
+                <div id="create-tournament-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+                    <div class="glass-effect rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-2xl font-bold text-white">Create New Tournament</h3>
+                            <button onclick="hideModal('create-tournament-modal')" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="create-tournament-form" class="space-y-4">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Tournament Name</label>
+                                    <input type="text" name="name" required class="w-full p-3 rounded-lg input-field" placeholder="Enter tournament name">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Date & Time</label>
+                                    <input type="datetime-local" name="date" required class="w-full p-3 rounded-lg input-field">
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Type</label>
+                                    <select name="type" required class="w-full p-3 rounded-lg input-field">
+                                        ${TOURNAMENT_TYPES.map(type => `<option value="${type}">${type}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Mode</label>
+                                    <select name="mode" required class="w-full p-3 rounded-lg input-field">
+                                        ${TOURNAMENT_MODES.map(mode => `<option value="${mode}">${mode}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Map</label>
+                                    <select name="map" required class="w-full p-3 rounded-lg input-field">
+                                        ${TOURNAMENT_MAPS.map(map => `<option value="${map}">${map}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Max Players</label>
+                                <input type="number" name="maxPlayers" value="52" required class="w-full p-3 rounded-lg input-field">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                                <textarea name="description" required rows="4" class="w-full p-3 rounded-lg input-field" placeholder="Describe the tournament rules and prizes..."></textarea>
+                            </div>
+                            <div class="flex justify-end space-x-4 pt-4">
+                                <button type="button" onclick="hideModal('create-tournament-modal')" class="px-6 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg btn-glow font-bold">
+                                    Create Tournament
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            // Add form submission handler
+            const form = document.getElementById('create-tournament-form');
+            if (form) {
+                form.addEventListener('submit', handleCreateTournament);
+            }
+
+            // Start countdown timers
+            startCountdownTimers();
+        }
+
+        function createTournamentCard(tournament) {
+            const now = new Date();
+            const tournamentDate = new Date(tournament.date);
+            const timeDiff = tournamentDate - now;
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const user = getCurrentUser();
+            const isRegistered = user && tournament.participants.includes(user.uid);
+            const spotsLeft = tournament.maxPlayers - tournament.participants.length;
+            const progress = (tournament.participants.length / tournament.maxPlayers) * 100;
+
+            return `
+                <div class="tournament-card rounded-2xl overflow-hidden transform hover:scale-105 transition-all duration-300">
+                    <!-- Card Header -->
+                    <div class="relative h-40 bg-gradient-to-r from-purple-600 to-red-600">
+                        <div class="absolute inset-0 bg-black/40"></div>
+                        <div class="absolute top-4 left-4">
+                            <span class="px-3 py-1 bg-yellow-500 text-black text-sm font-bold rounded-full">
+                                <i class="fas fa-trophy mr-1"></i>${tournament.type}
+                            </span>
+                        </div>
+                        <div class="absolute top-4 right-4">
+                            <span class="px-3 py-1 glass-effect text-white text-sm font-bold rounded-full">
+                                ${tournament.mode}
+                            </span>
+                        </div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <h3 class="text-xl font-bold text-white mb-1">${tournament.name}</h3>
+                            <p class="text-gray-200 text-sm">
+                                <i class="fas fa-map-marker-alt mr-1"></i>${tournament.map}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="p-6">
+                        <!-- Countdown Timer -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-400 text-sm">Starts in:</span>
+                                <span class="text-orange-400 text-sm font-bold">
+                                    ${days > 0 ? `${days}d ${hours}h` : 'Starting Soon'}
+                                </span>
+                            </div>
+                            <div class="countdown-timer text-2xl font-bold text-center text-white mb-2">
+                                ${formatCountdown(timeDiff)}
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-400 text-sm">Participants</span>
+                                <span class="text-gray-400 text-sm">${tournament.participants.length}/${tournament.maxPlayers}</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="progress-bar h-2 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tournament Info -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-gray-300">
+                                <i class="fas fa-calendar mr-2 w-4"></i>
+                                <span class="text-sm">${new Date(tournament.date).toLocaleDateString()}</span>
+                            </div>
+                            <div class="flex items-center text-gray-300">
+                                <i class="fas fa-clock mr-2 w-4"></i>
+                                <span class="text-sm">${new Date(tournament.date).toLocaleTimeString()}</span>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-2">${tournament.description}</p>
+
+                        <!-- Action Button -->
+                        ${user ? `
+                            <button onclick="handleTournamentRegistration('${tournament.id}', ${isRegistered})" 
+                                    class="w-full py-3 rounded-lg font-bold transition-all duration-300 ${
+                                        isRegistered 
+                                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
+                                            : spotsLeft > 0 
+                                                ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white btn-glow'
+                                                : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                                    }">
+                                ${isRegistered ? 'Registered ✓' : spotsLeft > 0 ? `Register Now (${spotsLeft} spots left)` : 'Tournament Full'}
+                            </button>
+                        ` : `
+                            <button onclick="showNotification('Please login to register for tournaments', 'warning')" 
+                                    class="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg btn-glow text-white font-bold">
+                                Login to Register
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatCountdown(timeDiff) {
+            if (timeDiff <= 0) return '00:00:00:00';
+            
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+            
+            return `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startCountdownTimers() {
+            setInterval(() => {
+                const timers = document.querySelectorAll('.countdown-timer');
+                timers.forEach(timer => {
+                    const currentText = timer.textContent;
+                    if (currentText !== '00:00:00:00' && currentText !== 'Starting Soon') {
+                        const parts = currentText.split(':');
+                        let days = parseInt(parts[0]);
+                        let hours = parseInt(parts[1]);
+                        let minutes = parseInt(parts[2]);
+                        let seconds = parseInt(parts[3]);
+                        
+                        seconds--;
+                        if (seconds < 0) {
+                            seconds = 59;
+                            minutes--;
+                            if (minutes < 0) {
+                                minutes = 59;
+                                hours--;
+                                if (hours < 0) {
+                                    hours = 23;
+                                    days--;
+                                    if (days < 0) {
+                                        timer.textContent = 'Starting Soon';
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        timer.textContent = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                });
+            }, 1000);
+        }
+
+        function showCreateTournamentModal() {
+            showModal('create-tournament-modal');
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function handleCreateTournament(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const tournamentData = {
+                name: formData.get('name'),
+                date: formData.get('date'),
+                type: formData.get('type'),
+                mode: formData.get('mode'),
+                map: formData.get('map'),
+                maxPlayers: parseInt(formData.get('maxPlayers')),
+                description: formData.get('description')
+            };
+            
+            addTournament(tournamentData);
+            hideModal('create-tournament-modal');
+            showNotification('Tournament created successfully!', 'success');
+            showPage('tournaments');
+        }
+
+        function handleTournamentRegistration(tournamentId, isRegistered) {
+            if (isRegistered) {
+                showNotification('You are already registered for this tournament!', 'info');
+                return;
+            }
+            
+            const user = getCurrentUser();
+            if (!user) {
+                showNotification('Please login to register for tournaments', 'warning');
+                return;
+            }
+            
+            registerForTournament(tournamentId, user.uid);
+            showNotification('Successfully registered for the tournament!', 'success');
+            showPage('tournaments');
+        }
+
+        // ==================== ENHANCED GUILD PROFILE ====================
+        function renderGuildProfile() {
+            const mainContent = document.getElementById('main-content');
+            const data = getGuildData();
+            const user = getCurrentUser();
+            const canEdit = user?.permissions.canEditGuildProfile;
+            
+            mainContent.innerHTML = `
+                <div id="page-guild-profile" class="page active">
+                    <!-- Cinematic Banner -->
+                    <div class="relative h-80 md:h-96 bg-gradient-to-r from-red-900/50 via-purple-900/50 to-blue-900/50 overflow-hidden">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3')] bg-cover bg-center"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-gray-900/90"></div>
+                        
+                        <!-- Floating Action Button -->
+                        <div class="absolute bottom-6 right-6">
+                            <a href="${data.guildInfo.joinLink}" target="_blank" 
+                               class="floating-btn w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl shadow-2xl transform hover:scale-110 transition-all duration-300 animate-pulse">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                        </div>
+
+                        <div class="relative container mx-auto px-4 h-full flex items-end pb-8">
+                            <div class="text-white">
+                                <h1 class="text-5xl md:text-6xl font-bold mb-2">${data.guildInfo.name}</h1>
+                                <p class="text-xl text-gray-300">Guild ID: ${data.guildInfo.id}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container mx-auto px-4 py-8">
+                        <!-- Stats Dashboard -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div class="stat-card rounded-xl p-6 text-center transform hover:scale-105 transition-transform duration-300">
+                                <div class="text-3xl font-bold text-white mb-2">${data.guildInfo.stats.totalMembers}</div>
+                                <div class="text-gray-400">Total Members</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6 text-center transform hover:scale-105 transition-transform duration-300">
+                                <div class="text-3xl font-bold text-green-400 mb-2">${data.guildInfo.stats.tournamentsWon}</div>
+                                <div class="text-gray-400">Tournaments Won</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6 text-center transform hover:scale-105 transition-transform duration-300">
+                                <div class="text-3xl font-bold text-yellow-400 mb-2">${data.guildInfo.stats.guildLevel}</div>
+                                <div class="text-gray-400">Guild Level</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6 text-center transform hover:scale-105 transition-transform duration-300">
+                                <div class="text-3xl font-bold text-blue-400 mb-2">${data.guildInfo.stats.winRate}%</div>
+                                <div class="text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+
+                        <!-- About Section -->
+                        <div class="glass-effect rounded-2xl p-6 mb-8">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-white">About Our Guild</h2>
+                                ${canEdit ? `
+                                    <button onclick="enableGuildEdit()" class="px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg btn-glow">
+                                        <i class="fas fa-edit mr-2"></i>Edit
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <p class="text-gray-300 leading-relaxed">${data.guildInfo.about}</p>
+                        </div>
+
+                        <!-- Rules Section -->
+                        <div class="glass-effect rounded-2xl p-6">
+                            <h2 class="text-2xl font-bold text-white mb-6">Guild Rules</h2>
+                            <div class="space-y-3">
+                                ${data.guildInfo.rules.map((rule, index) => `
+                                    <div class="flex items-start space-x-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors duration-300">
+                                        <div class="w-8 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                            ${index + 1}
+                                        </div>
+                                        <p class="text-gray-300 flex-1">${rule}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== ENHANCED ADMIN DASHBOARD ====================
+        function renderAdminDashboard() {
+            const mainContent = document.getElementById('main-content');
+            const data = getGuildData();
+            const user = getCurrentUser();
+            
+            const pendingPlayers = data.players.filter(p => p.status === 'pending');
+            const verifiedPlayers = data.players.filter(p => p.status === 'verified');
+            const roleDistribution = {};
+            data.players.forEach(player => {
+                roleDistribution[player.role] = (roleDistribution[player.role] || 0) + 1;
+            });
+
+            mainContent.innerHTML = `
+                <div id="page-admin" class="page active">
+                    <!-- Hero Section -->
+                    <div class="bg-gradient-to-br from-red-900/30 via-gray-900 to-black py-16 mb-8">
+                        <div class="container mx-auto px-4 text-center">
+                            <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+                                    Management Dashboard
+                                </span>
+                            </h1>
+                            <p class="text-xl text-gray-300">Monitor and manage your guild with powerful tools</p>
+                        </div>
+                    </div>
+
+                    <div class="container mx-auto px-4">
+                        <!-- Stats Overview -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div class="stat-card rounded-xl p-6">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-users text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-white">${data.players.length}</div>
+                                        <div class="text-gray-400">Total Members</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-user-clock text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-yellow-400">${pendingPlayers.length}</div>
+                                        <div class="text-gray-400">Pending Approval</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-trophy text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-green-400">${data.tournaments.length}</div>
+                                        <div class="text-gray-400">Active Tournaments</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card rounded-xl p-6">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-chart-line text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-purple-400">${data.guildInfo.stats.winRate}%</div>
+                                        <div class="text-gray-400">Guild Win Rate</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Approvals -->
+                        ${user?.permissions.canVerifyMembers && pendingPlayers.length > 0 ? `
+                            <div class="glass-effect rounded-2xl p-6 mb-8">
+                                <h2 class="text-2xl font-bold text-yellow-400 mb-6">
+                                    <i class="fas fa-user-clock mr-3"></i>Pending Member Approvals
+                                </h2>
+                                <div class="space-y-4">
+                                    ${pendingPlayers.map(player => `
+                                        <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                            <div class="flex items-center space-x-4">
+                                                <img src="${player.profileScreenshot}" alt="${player.name}" class="w-12 h-12 rounded-full object-cover">
+                                                <div>
+                                                    <h3 class="font-bold text-white">${player.name}</h3>
+                                                    <p class="text-gray-400 text-sm">UID: ${player.uid} | Email: ${player.email}</p>
+                                                </div>
+                                            </div>
+                                            <button onclick="verifyPlayer('${player.uid}')" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg btn-glow font-bold">
+                                                Approve
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Role Distribution -->
+                        <div class="glass-effect rounded-2xl p-6 mb-8">
+                            <h2 class="text-2xl font-bold text-white mb-6">Role Distribution</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                ${Object.entries(roleDistribution).map(([role, count]) => `
+                                    <div class="text-center p-4 bg-gray-800/50 rounded-lg">
+                                        <div class="text-2xl font-bold text-cyan-400 mb-1">${count}</div>
+                                        <div class="text-gray-400 text-sm">${role}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="glass-effect rounded-2xl p-6">
+                            <h2 class="text-2xl font-bold text-white mb-6">Quick Actions</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <button onclick="showCreateTournamentModal()" class="p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white font-bold text-left hover:scale-105 transition-transform duration-300">
+                                    <i class="fas fa-plus text-2xl mb-2"></i>
+                                    <div>Create Tournament</div>
+                                </button>
+                                <button onclick="showNotification('Feature coming soon!', 'info')" class="p-4 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg text-white font-bold text-left hover:scale-105 transition-transform duration-300">
+                                    <i class="fas fa-envelope text-2xl mb-2"></i>
+                                    <div>Send Announcement</div>
+                                </button>
+                                <button onclick="showNotification('Feature coming soon!', 'info')" class="p-4 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg text-white font-bold text-left hover:scale-105 transition-transform duration-300">
+                                    <i class="fas fa-chart-bar text-2xl mb-2"></i>
+                                    <div>View Analytics</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function verifyPlayer(uid) {
+            const data = getGuildData();
+            data.players = data.players.map(p => 
+                p.uid === uid ? { ...p, status: 'verified' } : p
+            );
+            guildData = data;
+            saveGuildData();
+            showNotification('Player verified successfully!', 'success');
+            showPage('admin');
+        }
+
+        // ==================== ENHANCED PROFILE PAGE ====================
+        function renderProfile(uid) {
+            const player = getPlayerByUid(uid);
+            const user = getCurrentUser();
+            
+            if (!player) {
+                showPage('home');
+                return;
+            }
+
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div id="page-profile" class="page active">
+                    <!-- Cover and Profile Picture -->
+                    <div class="relative h-64 md:h-80 bg-gradient-to-r from-red-900/50 to-purple-900/50 overflow-hidden">
+                        <img 
+                            src="${player.coverPhoto}" 
+                            alt="${player.name}'s cover photo"
+                            class="w-full h-full object-cover"
+                        />
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-gray-900/80"></div>
+
+                        <div class="absolute -bottom-16 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0">
+                            <div class="w-32 h-32 md:w-40 md:h-40 relative rounded-full border-4 border-red-500 bg-gray-800 shadow-2xl">
+                                <img
+                                    src="${player.profileScreenshot}"
+                                    alt="${player.name}'s profile"
+                                    class="w-full h-full rounded-full object-cover"
+                                />
+                                <div class="absolute -bottom-2 -right-2 text-4xl" title="${player.role === 'Leader' ? BADGE_DEFINITIONS['Guild Leader'].description : ''}">
+                                    ${player.role === 'Leader' ? BADGE_DEFINITIONS['Guild Leader'].icon : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="pt-20 md:pt-8 md:pl-60 p-6">
+                        <div class="flex flex-col md:flex-row justify-between items-start mb-6">
+                            <div class='text-center md:text-left mb-4 md:mb-0'>
+                                <h1 class="text-4xl font-bold text-white inline-flex items-center">
+                                    ${player.name}
+                                    ${player.status === 'verified' ? '<i class="fas fa-check-circle text-green-400 ml-2"></i>' : ''}
+                                </h1>
+                                <p class="text-sm mt-1 font-bold ${player.status === 'verified' ? 'text-green-400' : 'text-yellow-400'}">
+                                    ${player.status === 'verified' ? 'Verified Member' : 'Pending Approval'}
+                                </p>
+                                <p class="text-lg text-gray-400 mt-2">UID: ${player.uid}</p>
+                                <p class="text-xl text-red-400 font-semibold mt-2">${player.role}</p>
+                            </div>
+                            
+                            ${user?.uid === player.uid ? `
+                                <button onclick="enableProfileEdit()" class="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg btn-glow font-bold">
+                                    <i class="fas fa-edit mr-2"></i>Edit Profile
+                                </button>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Badges Display -->
+                        ${player.badges && player.badges.length > 0 ? `
+                            <div class="mb-6">
+                                <h2 class="text-xl font-bold text-white mb-3">Achievements</h2>
+                                <div class="flex flex-wrap gap-2">
+                                    ${player.badges.map(badgeName => {
+                                        const badge = BADGE_DEFINITIONS[badgeName];
+                                        if (!badge) return '';
+                                        return `
+                                            <span title="${badge.description}" class="flex items-center gap-2 text-sm font-bold px-3 py-2 rounded-full ${badge.color} transform hover:scale-105 transition-transform duration-300">
+                                                <span class="text-lg">${badge.icon}</span>
+                                                <span>${badgeName}</span>
+                                            </span>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="stat-card rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-white">${player.stats.matches}</div>
+                                <div class="text-gray-400 text-sm">Matches</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-green-400">${player.stats.kills}</div>
+                                <div class="text-gray-400 text-sm">Kills</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-yellow-400">${player.stats.wins}</div>
+                                <div class="text-gray-400 text-sm">Wins</div>
+                            </div>
+                            <div class="stat-card rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-blue-400">${player.stats.kd}</div>
+                                <div class="text-gray-400 text-sm">K/D Ratio</div>
+                            </div>
+                        </div>
+
+                        <!-- Bio Display -->
+                        <div class="glass-effect rounded-2xl p-6 mb-6">
+                            <h2 class="text-xl font-bold text-white mb-3">About</h2>
+                            <p class="text-gray-300 leading-relaxed">${player.bio || 'No bio provided.'}</p>
+                        </div>
+
+                        <!-- Social Links Display -->
+                        ${Object.values(player.socials).some(link => link) ? `
+                            <div class="glass-effect rounded-2xl p-6">
+                                <h2 class="text-xl font-bold text-white mb-4">Connect</h2>
+                                <div class="flex flex-wrap gap-4">
+                                    ${Object.entries(player.socials).map(([platform, link]) => 
+                                        link ? `
+                                            <a href="${link}" target="_blank" class="social-link w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-600 transition-all duration-300 transform hover:scale-110">
+                                                <i class="fab fa-${platform} text-xl"></i>
+                                            </a>
+                                        ` : ''
+                                    ).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== ENHANCED LOGIN PAGE ====================
+        function renderLogin() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div id="page-login" class="page active">
+                    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                        <div class="w-full max-w-md">
+                            <!-- Animated Logo -->
+                            <div class="text-center mb-8">
+                                <div class="w-20 h-20 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl animate-pulse">
+                                    <span class="text-white font-bold text-2xl">FF</span>
+                                </div>
+                                <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400">
+                                    FF MONSTER
+                                </h1>
+                                <p class="text-gray-400 mt-2">Guild Hub Access Portal</p>
+                            </div>
+
+                            <!-- Login Card -->
+                            <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+                                <div class="flex border-b border-gray-600 mb-6">
+                                    <button id="login-tab" class="flex-1 py-3 text-lg font-bold transition-colors text-red-400 border-b-2 border-red-400">
+                                        <i class="fas fa-sign-in-alt mr-2"></i>Login
+                                    </button>
+                                    <button id="register-tab" class="flex-1 py-3 text-lg font-bold transition-colors text-gray-400">
+                                        <i class="fas fa-user-plus mr-2"></i>Register
+                                    </button>
+                                </div>
+                                
+                                <div id="error-message" class="hidden p-3 bg-red-500/20 border border-red-500 rounded-lg mb-4">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    <span class="text-red-400"></span>
+                                </div>
+                                <div id="success-message" class="hidden p-3 bg-green-500/20 border border-green-500 rounded-lg mb-4">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <span class="text-green-400"></span>
+                                </div>
+
+                                <!-- Login Form -->
+                                <form id="login-form" class="space-y-4">
+                                    <div>
+                                        <label for="email-login" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                                        <div class="relative">
+                                            <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="email-login" type="email" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="your.email@example.com"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="password-login" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                                        <div class="relative">
+                                            <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="password-login" type="password" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="••••••••"/>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg btn-glow text-white font-bold text-lg">
+                                        <i class="fas fa-sign-in-alt mr-2"></i>Login to Guild Hub
+                                    </button>
+                                </form>
+
+                                <!-- Register Form -->
+                                <form id="register-form" class="space-y-4 hidden">
+                                    <div class="text-center mb-4">
+                                        <p class="text-sm text-gray-400">Join our elite gaming community</p>
+                                    </div>
+                                    <div>
+                                        <label for="uid-reg" class="block text-sm font-medium text-gray-300 mb-2">In-Game UID</label>
+                                        <div class="relative">
+                                            <i class="fas fa-id-card absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="uid-reg" type="text" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="e.g., 1234567890"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="name-reg" class="block text-sm font-medium text-gray-300 mb-2">In-Game Full Name</label>
+                                        <div class="relative">
+                                            <i class="fas fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="name-reg" type="text" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="e.g., Shadow Striker"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="email-reg" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                                        <div class="relative">
+                                            <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="email-reg" type="email" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="your.email@example.com"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="password-reg" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                                        <div class="relative">
+                                            <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <input id="password-reg" type="password" required class="w-full pl-10 pr-4 py-3 rounded-lg input-field focus:ring-2 focus:ring-red-500" placeholder="Choose a strong password"/>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg btn-glow text-white font-bold text-lg">
+                                        <i class="fas fa-user-plus mr-2"></i>Join FF MONSTER
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners
+            document.getElementById('login-tab').addEventListener('click', switchToLogin);
+            document.getElementById('register-tab').addEventListener('click', switchToRegister);
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
         function setupSearchAndFilter() {
             const searchInput = document.getElementById('search-members');
             const roleFilter = document.getElementById('role-filter');
+            const statusFilter = document.getElementById('status-filter');
             
             function filterMembers() {
                 const searchTerm = searchInput.value.toLowerCase();
                 const roleFilterValue = roleFilter.value;
+                const statusFilterValue = statusFilter.value;
                 const data = getGuildData();
                 const members = data.players;
                 
@@ -528,8 +1780,9 @@
                     const matchesSearch = player.name.toLowerCase().includes(searchTerm) || 
                                         player.uid.includes(searchTerm);
                     const matchesRole = !roleFilterValue || player.role === roleFilterValue;
+                    const matchesStatus = !statusFilterValue || player.status === statusFilterValue;
                     
-                    return matchesSearch && matchesRole;
+                    return matchesSearch && matchesRole && matchesStatus;
                 });
                 
                 document.getElementById('members-grid').innerHTML = 
@@ -544,29 +1797,92 @@
             });
             
             roleFilter.addEventListener('change', filterMembers);
+            statusFilter.addEventListener('change', filterMembers);
         }
 
-        // ==================== ENHANCED LOADING STATES ====================
-        function showLoadingSkeleton(count = 8) {
-            return `
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    ${Array(count).fill(0).map(() => `
-                        <div class="bg-gray-800 rounded-xl overflow-hidden animate-pulse">
-                            <div class="skeleton h-48 w-full"></div>
-                            <div class="p-4 space-y-3">
-                                <div class="skeleton h-4 w-3/4 rounded"></div>
-                                <div class="skeleton h-3 w-1/2 rounded"></div>
-                                <div class="flex space-x-2">
-                                    <div class="skeleton h-6 w-6 rounded-full"></div>
-                                    <div class="skeleton h-6 w-6 rounded-full"></div>
-                                    <div class="skeleton h-6 w-6 rounded-full"></div>
-                                </div>
-                                <div class="skeleton h-3 w-full rounded"></div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+        function switchToLogin() {
+            document.getElementById('login-tab').classList.add('text-red-400', 'border-b-2', 'border-red-400');
+            document.getElementById('login-tab').classList.remove('text-gray-400');
+            document.getElementById('register-tab').classList.add('text-gray-400');
+            document.getElementById('register-tab').classList.remove('text-red-400', 'border-b-2', 'border-red-400');
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            clearMessages();
+        }
+
+        function switchToRegister() {
+            document.getElementById('register-tab').classList.add('text-red-400', 'border-b-2', 'border-red-400');
+            document.getElementById('register-tab').classList.remove('text-gray-400');
+            document.getElementById('login-tab').classList.add('text-gray-400');
+            document.getElementById('login-tab').classList.remove('text-red-400', 'border-b-2', 'border-red-400');
+            document.getElementById('register-form').classList.remove('hidden');
+            document.getElementById('login-form').classList.add('hidden');
+            clearMessages();
+        }
+
+        function clearMessages() {
+            document.getElementById('error-message').classList.add('hidden');
+            document.getElementById('success-message').classList.add('hidden');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email-login').value;
+            
+            const result = await signIn(email);
+            
+            if (result.success) {
+                showLoginMessage('success', result.message);
+                setTimeout(() => {
+                    renderNavbar();
+                    renderMobileNav();
+                    showPage('home');
+                }, 1000);
+            } else {
+                showLoginMessage('error', result.message);
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const uid = document.getElementById('uid-reg').value;
+            const name = document.getElementById('name-reg').value;
+            const email = document.getElementById('email-reg').value;
+            
+            if (!/^\d+$/.test(uid)) {
+                showLoginMessage('error', 'UID must contain only numbers.');
+                return;
+            }
+            
+            const result = await signUp({ uid, name, email });
+            
+            if (result.success) {
+                showLoginMessage('success', result.message);
+                setTimeout(() => {
+                    switchToLogin();
+                    document.getElementById('uid-reg').value = '';
+                    document.getElementById('name-reg').value = '';
+                    document.getElementById('email-reg').value = '';
+                    document.getElementById('password-reg').value = '';
+                }, 2000);
+            } else {
+                showLoginMessage('error', result.message);
+            }
+        }
+
+        function showLoginMessage(type, message) {
+            const errorEl = document.getElementById('error-message');
+            const successEl = document.getElementById('success-message');
+            
+            if (type === 'error') {
+                errorEl.querySelector('span').textContent = message;
+                errorEl.classList.remove('hidden');
+                successEl.classList.add('hidden');
+            } else {
+                successEl.querySelector('span').textContent = message;
+                successEl.classList.remove('hidden');
+                errorEl.classList.add('hidden');
+            }
         }
 
         // ==================== MOBILE BOTTOM NAVIGATION ====================
@@ -600,8 +1916,14 @@
                     .mobile-nav-item {
                         @apply flex flex-col items-center text-gray-400 transition-all duration-300;
                     }
-                    .mobile-nav-item:hover {
+                    .mobile-nav-item:hover, .mobile-nav-item.active {
                         @apply text-red-500 transform scale-110;
+                    }
+                    .floating-btn {
+                        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+                    }
+                    .social-link:hover {
+                        box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
                     }
                 </style>
             `;
@@ -692,6 +2014,13 @@
         // Make functions globally available
         window.logout = logout;
         window.showPage = showPage;
+        window.showNotification = showNotification;
+        window.closeNotification = closeNotification;
+        window.showModal = showModal;
+        window.hideModal = hideModal;
+        window.showCreateTournamentModal = showCreateTournamentModal;
+        window.handleTournamentRegistration = handleTournamentRegistration;
+        window.verifyPlayer = verifyPlayer;
     </script>
 </body>
 </html>
